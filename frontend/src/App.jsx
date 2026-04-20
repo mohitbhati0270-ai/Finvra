@@ -12,6 +12,7 @@ import PortfolioOptimizationChart from './components/PortfolioOptimizationChart'
 import InsightsPanel from './components/InsightsPanel'
 import PortfolioScore from './components/PortfolioScore'
 import StockSearch from './components/StockSearch'
+import ExportPDF from './components/ExportPDF'
 
 const formatINR = (value) =>
   new Intl.NumberFormat('en-IN', {
@@ -63,7 +64,6 @@ function App() {
     setIsWakingUp(true)
     setError(null)
 
-    // After 5 seconds stop showing waking up message
     setTimeout(() => setIsWakingUp(false), 5000)
 
     try {
@@ -361,6 +361,12 @@ function App() {
         {result && (
           <div className="space-y-6">
 
+            {/* Export PDF Button */}
+            <div className="flex justify-end">
+              <ExportPDF result={result} benchData={benchData} varData={varData} />
+            </div>
+
+            {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Annual Return', value: formatPct(result.summary.annual_return_pct), color: returnColor(result.summary.annual_return_pct) },
@@ -375,8 +381,10 @@ function App() {
               ))}
             </div>
 
+            {/* Portfolio Score */}
             {result?.score && <PortfolioScore score={result.score} />}
 
+            {/* Individual Stocks Table */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-gray-100">
                 <h2 className="font-semibold text-gray-800">Individual Stocks</h2>
@@ -406,8 +414,10 @@ function App() {
               </table>
             </div>
 
+            {/* Return vs Volatility */}
             <RiskReturnChart stocks={result.stocks} />
 
+            {/* Allocation + Risk Contribution */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <AllocationChart
                 stocks={result.stocks}
@@ -419,11 +429,19 @@ function App() {
               />
             </div>
 
+            {/* Benchmark Chart */}
             {benchData && <BenchmarkChart data={benchData} />}
+
+            {/* Portfolio Optimization */}
             {optData && <PortfolioOptimizationChart data={optData} />}
+
+            {/* Correlation Matrix */}
             <CorrelationMatrix correlationMatrix={result.correlation_matrix} />
+
+            {/* VaR */}
             {varData && <VaRChart data={varData} />}
 
+            {/* Sensitivity Analysis */}
             {returnsData && (
               <SensitivityAnalysis
                 stocks={result.stocks}
@@ -435,6 +453,7 @@ function App() {
         )}
       </div>
 
+      {/* Floating Insights Panel */}
       {result?.insights && (
         <InsightsPanel insights={result.insights} />
       )}
