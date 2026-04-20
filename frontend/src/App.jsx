@@ -41,6 +41,7 @@ function App() {
   const [optData, setOptData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isWakingUp, setIsWakingUp] = useState(false)
 
   const holdingCalcs = useMemo(() => {
     const withAmounts = holdings.map(h => ({
@@ -59,7 +60,12 @@ function App() {
 
   const handleAnalyze = async () => {
     setLoading(true)
+    setIsWakingUp(true)
     setError(null)
+
+    // After 5 seconds stop showing waking up message
+    setTimeout(() => setIsWakingUp(false), 5000)
+
     try {
       let tickers, weightDecimals
 
@@ -68,6 +74,7 @@ function App() {
         if (validHoldings.length < 2) {
           setError('Please add at least 2 stocks with quantity and price to analyze.')
           setLoading(false)
+          setIsWakingUp(false)
           return
         }
         tickers = validHoldings.map(h => h.ticker)
@@ -79,6 +86,7 @@ function App() {
         if (validQuick.length < 2) {
           setError('Please add at least 2 stocks with weights to analyze.')
           setLoading(false)
+          setIsWakingUp(false)
           return
         }
         tickers = validQuick.map(x => x.ticker)
@@ -100,9 +108,15 @@ function App() {
       setBenchData(bench)
       setOptData(opt)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Something went wrong')
+      const detail = err.response?.data?.detail
+      if (detail) {
+        setError(detail)
+      } else {
+        setError('Something went wrong. Please check your stock tickers and try again.')
+      }
     } finally {
       setLoading(false)
+      setIsWakingUp(false)
     }
   }
 
@@ -111,7 +125,6 @@ function App() {
     ? holdingCalcs.filter(h => h.ticker && h.amount > 0).length >= 2
     : quickTickers.filter((t, i) => t && quickWeights[i] > 0).length >= 2
 
-  // Shared height for allocation + risk contribution charts
   const sharedChartHeight = result
     ? (result.stocks.length > 20 ? 700
       : result.stocks.length > 10 ? 600
@@ -330,18 +343,24 @@ function App() {
             disabled={loading || !isReady}
             className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-3 rounded-xl transition"
           >
-            {loading ? 'Analyzing... (this may take 20-30 seconds)' : 'Analyze Portfolio'}
+            {loading
+              ? isWakingUp
+                ? '⏳ Waking up server... please wait 30-60 seconds on first load'
+                : '🔄 Analyzing your portfolio...'
+              : 'Analyze Portfolio'
+            }
           </button>
 
           {error && (
-            <div className="mt-3 text-red-500 text-sm bg-red-50 p-3 rounded-lg">{error}</div>
+            <div className="mt-3 text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+              ⚠️ {error}
+            </div>
           )}
         </div>
 
         {result && (
           <div className="space-y-6">
 
-            {/* 1. Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Annual Return', value: formatPct(result.summary.annual_return_pct), color: returnColor(result.summary.annual_return_pct) },
@@ -356,10 +375,8 @@ function App() {
               ))}
             </div>
 
-            {/* 2. Portfolio Score */}
             {result?.score && <PortfolioScore score={result.score} />}
 
-            {/* 3. Individual Stocks Table */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-gray-100">
                 <h2 className="font-semibold text-gray-800">Individual Stocks</h2>
@@ -389,10 +406,8 @@ function App() {
               </table>
             </div>
 
-            {/* 4. Return vs Volatility */}
             <RiskReturnChart stocks={result.stocks} />
 
-            {/* 5. Allocation + Risk Contribution — same height */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <AllocationChart
                 stocks={result.stocks}
@@ -404,19 +419,11 @@ function App() {
               />
             </div>
 
-            {/* 6. Benchmark Chart */}
             {benchData && <BenchmarkChart data={benchData} />}
-
-            {/* 7. Portfolio Optimization */}
             {optData && <PortfolioOptimizationChart data={optData} />}
-
-            {/* 8. Correlation Matrix */}
             <CorrelationMatrix correlationMatrix={result.correlation_matrix} />
-
-            {/* 9. VaR */}
             {varData && <VaRChart data={varData} />}
 
-            {/* 10. Sensitivity Analysis */}
             {returnsData && (
               <SensitivityAnalysis
                 stocks={result.stocks}
@@ -428,7 +435,6 @@ function App() {
         )}
       </div>
 
-      {/* Floating Insights Panel */}
       {result?.insights && (
         <InsightsPanel insights={result.insights} />
       )}

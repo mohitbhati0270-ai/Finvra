@@ -61,6 +61,21 @@ def _get_scaling(n_stocks):
         return 5000, 60
 
 
+def _handle_error(e):
+    error_msg = str(e)
+    if "index -1 is out of bounds" in error_msg or "0 with size 0" in error_msg or "No data" in error_msg:
+        raise HTTPException(
+            status_code=400,
+            detail="One or more stocks have insufficient data for this period. Try a shorter period (1y or 2y) or check the ticker symbol."
+        )
+    if "No price data" in error_msg or "delisted" in error_msg.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Could not fetch price data for one or more stocks. Please check the ticker symbol."
+        )
+    raise HTTPException(status_code=500, detail=f"Server error: {error_msg}")
+
+
 @router.post("/analyze")
 async def analyze_portfolio(req: PortfolioRequest):
     try:
@@ -97,10 +112,12 @@ async def analyze_portfolio(req: PortfolioRequest):
             result["score"] = None
 
         return result
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        _handle_error(e)
 
 
 @router.get("/sample-tickers")
@@ -125,8 +142,10 @@ async def monte_carlo(req: PortfolioRequest):
         n_sims, _ = _get_scaling(n)
         result = run_monte_carlo(returns, n_simulations=n_sims)
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.post("/var")
@@ -138,8 +157,10 @@ async def value_at_risk(req: PortfolioRequest):
         weights = _normalize_weights(req.weights, n)
         result  = compute_var_metrics(returns, weights)
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.post("/efficient-frontier")
@@ -151,8 +172,10 @@ async def efficient_frontier(req: PortfolioRequest):
         _, n_points = _get_scaling(n)
         result = compute_efficient_frontier(returns, n_points=n_points)
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.post("/returns-data")
@@ -165,8 +188,10 @@ async def get_returns_data(req: PortfolioRequest):
             "tickers": tickers_clean,
             "returns": returns.values.tolist()
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.post("/benchmark-comparison")
@@ -196,8 +221,10 @@ async def benchmark_comparison(req: PortfolioRequest):
             "portfolio": combined["portfolio"].round(2).tolist(),
             "nifty50":   combined["nifty50"].round(2).tolist(),
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.post("/optimization-chart")
@@ -248,8 +275,10 @@ async def optimization_chart(req: PortfolioRequest):
             "best_sharpe_weights":  mc["best_sharpe"]["weights"],
             "min_variance_weights": min_var_weights,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        _handle_error(e)
 
 
 @router.get("/search-stocks")
