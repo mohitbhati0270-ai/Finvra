@@ -33,18 +33,21 @@ def compute_portfolio_analytics(
         r = float(ann_returns.iloc[i])
         v = float(np.sqrt(ann_cov.iloc[i, i]))
 
+        beta = 1.0
         if benchmark_returns is not None:
-            bench_r = benchmark_returns.pct_change().dropna()
-            aligned = pd.concat(
-                [returns[ticker], bench_r], axis=1
-            ).dropna()
-            cov_bm = float(
-                np.cov(aligned.iloc[:, 0], aligned.iloc[:, 1])[0][1]
-            )
-            var_bm = float(aligned.iloc[:, 1].var())
-            beta = round(cov_bm / var_bm, 4) if var_bm > 0 else 1.0
-        else:
-            beta = 1.0
+            try:
+                bench_r = benchmark_returns.pct_change().dropna()
+                aligned = pd.concat(
+                    [returns[ticker], bench_r], axis=1
+                ).dropna()
+                if len(aligned) >= 10:
+                    cov_bm = float(
+                        np.cov(aligned.iloc[:, 0], aligned.iloc[:, 1])[0][1]
+                    )
+                    var_bm = float(aligned.iloc[:, 1].var())
+                    beta = round(cov_bm / var_bm, 4) if var_bm > 0 else 1.0
+            except Exception:
+                beta = 1.0
 
         marginal = float(np.dot(ann_cov.iloc[i], w)) / port_vol if port_vol > 0 else 0
         risk_contribution = float(w[i] * marginal / port_vol) if port_vol > 0 else 0
@@ -58,19 +61,22 @@ def compute_portfolio_analytics(
             "risk_contribution_pct": round(risk_contribution * 100, 2),
         })
 
+    port_beta = 1.0
     if benchmark_returns is not None:
-        port_daily_returns = returns.dot(w)
-        bench_r = benchmark_returns.pct_change().dropna()
-        aligned = pd.concat(
-            [port_daily_returns, bench_r], axis=1
-        ).dropna()
-        cov_pb = float(
-            np.cov(aligned.iloc[:, 0], aligned.iloc[:, 1])[0][1]
-        )
-        var_b = float(aligned.iloc[:, 1].var())
-        port_beta = round(cov_pb / var_b, 4) if var_b > 0 else 1.0
-    else:
-        port_beta = 1.0
+        try:
+            port_daily_returns = returns.dot(w)
+            bench_r = benchmark_returns.pct_change().dropna()
+            aligned = pd.concat(
+                [port_daily_returns, bench_r], axis=1
+            ).dropna()
+            if len(aligned) >= 10:
+                cov_pb = float(
+                    np.cov(aligned.iloc[:, 0], aligned.iloc[:, 1])[0][1]
+                )
+                var_b = float(aligned.iloc[:, 1].var())
+                port_beta = round(cov_pb / var_b, 4) if var_b > 0 else 1.0
+        except Exception:
+            port_beta = 1.0
 
     return {
         "summary": {
@@ -134,12 +140,17 @@ def compute_var_metrics(
 
     w = np.array(weights)
     port_returns = returns.dot(w)
+
+    if len(port_returns) < 10:
+        raise ValueError("Insufficient data to compute VaR metrics.")
+
     results = {}
 
     for cl in confidence_levels:
-        alpha = 1 - cl
+        alpha     = 1 - cl
         hist_var  = float(-np.percentile(port_returns, alpha * 100))
-        cvar      = float(-port_returns[port_returns <= -hist_var].mean())
+        below_var = port_returns[port_returns <= -hist_var]
+        cvar      = float(-below_var.mean()) if len(below_var) > 0 else hist_var
         mu        = float(port_returns.mean())
         sigma     = float(port_returns.std())
         z         = float(norm.ppf(alpha))
@@ -170,8 +181,8 @@ def compute_efficient_frontier(
     n = len(mean_returns)
     Rf = settings.risk_free_rate
 
-    bounds      = tuple((0, 1) for _ in range(n))
-    x0          = np.array([1/n] * n)
+    bounds           = tuple((0, 1) for _ in range(n))
+    x0               = np.array([1/n] * n)
     base_constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
     def portfolio_vol(w):
@@ -180,7 +191,7 @@ def compute_efficient_frontier(
     def portfolio_ret(w):
         return float(np.dot(w, mean_returns))
 
-    # --- Step 1: Find true minimum variance portfolio ---
+    # Find minimum variance portfolio
     min_var_result = minimize(
         portfolio_vol,
         x0=x0,
@@ -191,7 +202,7 @@ def compute_efficient_frontier(
     min_vol = portfolio_vol(min_var_result.x)
     min_ret = portfolio_ret(min_var_result.x)
 
-    # --- Step 2: Find maximum return portfolio ---
+    # Find maximum return portfolio
     max_ret_result = minimize(
         lambda w: -portfolio_ret(w),
         x0=x0,
@@ -201,13 +212,12 @@ def compute_efficient_frontier(
     )
     max_ret = portfolio_ret(max_ret_result.x)
 
-    # --- Step 3: Sweep target returns from min to max ---
-    # Start slightly above min_ret to avoid infeasibility
+    # Sweep target returns
     target_returns = np.linspace(min_ret * 1.001, max_ret * 0.999, n_points)
 
-    frontier_risks    = []
-    frontier_returns  = []
-    frontier_sharpes  = []
+    frontier_risks   = []
+    frontier_returns = []
+    frontier_sharpes = []
 
     for target in target_returns:
         constraints = [
@@ -223,22 +233,22 @@ def compute_efficient_frontier(
             options={"ftol": 1e-9, "maxiter": 1000}
         )
         if result.success:
-            vol = portfolio_vol(result.x)
-            ret = portfolio_ret(result.x)
+            vol    = portfolio_vol(result.x)
+            ret    = portfolio_ret(result.x)
             sharpe = (ret - Rf) / vol if vol > 0 else 0
             frontier_risks.append(round(vol * 100, 4))
             frontier_returns.append(round(ret * 100, 4))
             frontier_sharpes.append(round(sharpe, 4))
 
-    # --- Step 4: Sort by risk for smooth left-to-right curve ---
+    # Sort by risk for smooth curve
     if frontier_risks:
         combined = sorted(
             zip(frontier_risks, frontier_returns, frontier_sharpes),
             key=lambda x: x[0]
         )
-        frontier_risks    = [x[0] for x in combined]
-        frontier_returns  = [x[1] for x in combined]
-        frontier_sharpes  = [x[2] for x in combined]
+        frontier_risks   = [x[0] for x in combined]
+        frontier_returns = [x[1] for x in combined]
+        frontier_sharpes = [x[2] for x in combined]
 
     min_var_idx    = int(np.argmin(frontier_risks)) if frontier_risks else 0
     max_sharpe_idx = int(np.argmax(frontier_sharpes)) if frontier_sharpes else 0
@@ -271,7 +281,7 @@ def generate_insights(
     sharpe      = summary["sharpe_ratio"]
     beta        = summary["portfolio_beta"]
 
-    # --- Insight 1: Benchmark comparison ---
+    # Insight 1: Benchmark comparison
     if benchmark_return is not None:
         diff = round(port_return - benchmark_return, 2)
         if diff > 0:
@@ -298,7 +308,7 @@ def generate_insights(
                 f"Review your holdings."
             )
 
-    # --- Insight 2: Sharpe ratio ---
+    # Insight 2: Sharpe ratio
     if sharpe >= 1.0:
         insights.append(
             f"Excellent Sharpe Ratio of {sharpe:.2f} — your returns well "
@@ -321,7 +331,7 @@ def generate_insights(
             f"Review your stock selection."
         )
 
-    # --- Insight 3: Concentration risk ---
+    # Insight 3: Concentration risk
     sorted_by_risk = sorted(
         stocks, key=lambda x: x["risk_contribution_pct"], reverse=True
     )
@@ -345,7 +355,7 @@ def generate_insights(
             f"{top_risk_stock['risk_contribution_pct']:.1f}%."
         )
 
-    # --- Insight 4: Beta ---
+    # Insight 4: Beta
     if beta > 1.2:
         insights.append(
             f"High portfolio beta of {beta:.2f} — your portfolio is "
@@ -385,7 +395,7 @@ def compute_portfolio_score(
 
     scores = {}
 
-    # --- 1. Returns Score (20 pts) ---
+    # 1. Returns Score (20 pts)
     if benchmark_return is not None:
         diff = port_return - benchmark_return
         if diff >= 5:      r_score = 20
@@ -403,7 +413,7 @@ def compute_portfolio_score(
         else:                   r_score = 0
     scores["returns"] = r_score
 
-    # --- 2. Sharpe Score (20 pts) ---
+    # 2. Sharpe Score (20 pts)
     if sharpe >= 1.5:     s_score = 20
     elif sharpe >= 1.0:   s_score = 16
     elif sharpe >= 0.5:   s_score = 12
@@ -412,7 +422,7 @@ def compute_portfolio_score(
     else:                 s_score = 0
     scores["sharpe"] = s_score
 
-    # --- 3. Diversification Score (20 pts) ---
+    # 3. Diversification Score (20 pts)
     top_risk = max(s["risk_contribution_pct"] for s in stocks)
     n_stocks = len(stocks)
     if top_risk <= 20 and n_stocks >= 5:   d_score = 20
@@ -423,7 +433,7 @@ def compute_portfolio_score(
     else:                                  d_score = 0
     scores["diversification"] = d_score
 
-    # --- 4. Beta Score (20 pts) ---
+    # 4. Beta Score (20 pts)
     if 0.8 <= beta <= 1.1:    b_score = 20
     elif 0.6 <= beta <= 1.3:  b_score = 16
     elif 0.4 <= beta <= 1.5:  b_score = 12
@@ -432,7 +442,7 @@ def compute_portfolio_score(
     else:                     b_score = 0
     scores["beta"] = b_score
 
-    # --- 5. Volatility Score (20 pts) ---
+    # 5. Volatility Score (20 pts)
     if port_vol <= 12:    v_score = 20
     elif port_vol <= 15:  v_score = 16
     elif port_vol <= 20:  v_score = 12
