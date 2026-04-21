@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { analyzePortfolio, getVaR, getReturnsData, getBenchmarkComparison, getOptimizationChart } from './api/portfolioApi'
 import { formatPct, returnColor } from './utils/formatters'
 import AllocationChart from './components/AllocationChart'
@@ -57,6 +57,17 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isWakingUp, setIsWakingUp] = useState(false)
+
+  // Keep backend alive — ping every 10 minutes
+  useEffect(() => {
+    const keepAlive = () => {
+      fetch('https://finvra-backend.onrender.com')
+        .catch(() => {})
+    }
+    keepAlive()
+    const interval = setInterval(keepAlive, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   const holdingCalcs = useMemo(() => {
     const withAmounts = holdings.map(h => ({
@@ -247,7 +258,6 @@ function App() {
             Sharpe ratio, Monte Carlo, Efficient Frontier, VaR — institutional analytics made simple for every Indian investor.
           </p>
 
-          {/* Feature pills */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
               '📊 Portfolio Health Score',
@@ -275,7 +285,6 @@ function App() {
         {/* ── PORTFOLIO INPUT CARD ── */}
         <div style={{ ...cardStyle, padding: '32px', marginBottom: '24px' }}>
 
-          {/* Mode Toggle */}
           <div style={{
             display: 'flex',
             background: '#F1F5F9',
@@ -311,7 +320,6 @@ function App() {
             ))}
           </div>
 
-          {/* Real Portfolio Mode */}
           {mode === 'real' && (
             <div>
               <div style={{ overflowX: 'auto' }}>
@@ -474,7 +482,6 @@ function App() {
             </div>
           )}
 
-          {/* Quick Analysis Mode */}
           {mode === 'quick' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {quickTickers.map((ticker, i) => (
