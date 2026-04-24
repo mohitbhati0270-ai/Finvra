@@ -1,0 +1,17 @@
+export const theme = {
+  navy:       '#0A1628',
+  navyDark:   '#050D1A',
+  navyCard:   '#0F1F3D',
+  navyLight:  '#162444',
+  gold:       '#C9A84C',
+  goldLight:  '#F4E4A6',
+  goldDark:   '#A07830',
+  white:      '#E8EDF5',
+  whiteLight: '#F8FAFC',
+  gray:       '#8892A4',
+  grayLight:  '#B8C4D0',
+  green:      '#10B981',
+  red:        '#EF4444',
+  border:     'rgba(201,168,76,0.15)',
+  borderLight:'rgba(201,168,76,0.3)',
+}

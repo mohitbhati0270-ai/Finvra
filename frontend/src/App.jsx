@@ -1,6 +1,14 @@
+import { Routes, Route } from 'react-router-dom'
 import { useState, useMemo, useEffect } from 'react'
 import { analyzePortfolio, getVaR, getReturnsData, getBenchmarkComparison, getOptimizationChart } from './api/portfolioApi'
 import { formatPct, returnColor } from './utils/formatters'
+import { theme } from './theme'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import Home from './pages/Home'
+import Services from './pages/Services'
+import Blog from './pages/Blog'
+import Contact from './pages/Contact'
 import AllocationChart from './components/AllocationChart'
 import RiskReturnChart from './components/RiskReturnChart'
 import CorrelationMatrix from './components/CorrelationMatrix'
@@ -23,32 +31,15 @@ const formatINR = (value) =>
     maximumFractionDigits: 2,
   }).format(value)
 
-const gradientText = {
-  background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #3B82F6)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
-}
-
-const cardStyle = {
-  background: 'white',
-  borderRadius: '16px',
-  border: '1px solid rgba(99, 102, 241, 0.1)',
-  boxShadow: '0 4px 24px rgba(99, 102, 241, 0.08)',
-}
-
-function App() {
+function AnalysePage() {
   const [mode, setMode] = useState('real')
-
   const [holdings, setHoldings] = useState([
     { ticker: '', qty: 0, avgPrice: 0 },
     { ticker: '', qty: 0, avgPrice: 0 },
     { ticker: '', qty: 0, avgPrice: 0 },
   ])
-
   const [quickTickers, setQuickTickers] = useState(['', '', ''])
   const [quickWeights, setQuickWeights] = useState([0, 0, 0])
-
   const [period, setPeriod] = useState('2y')
   const [result, setResult] = useState(null)
   const [varData, setVarData] = useState(null)
@@ -59,21 +50,8 @@ function App() {
   const [error, setError] = useState(null)
   const [isWakingUp, setIsWakingUp] = useState(false)
 
-  // Keep backend alive
-  useEffect(() => {
-    const keepAlive = () => {
-      fetch('https://finvra-backend.onrender.com').catch(() => {})
-    }
-    keepAlive()
-    const interval = setInterval(keepAlive, 10 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
-
   const holdingCalcs = useMemo(() => {
-    const withAmounts = holdings.map(h => ({
-      ...h,
-      amount: h.qty * h.avgPrice,
-    }))
+    const withAmounts = holdings.map(h => ({ ...h, amount: h.qty * h.avgPrice }))
     const total = withAmounts.reduce((s, h) => s + h.amount, 0)
     return withAmounts.map(h => ({
       ...h,
@@ -182,129 +160,49 @@ function App() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #F8F7FF 0%, #EEF2FF 50%, #F5F3FF 100%)',
+      background:   theme.navyDark,
+      minHeight:    '100vh',
       paddingRight: result ? '340px' : '0',
-      transition: 'padding-right 0.3s ease',
+      transition:   'padding-right 0.3s ease',
     }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
 
-      {/* NAVBAR */}
-      <nav style={{
-        background: 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(99,102,241,0.1)',
-        padding: '0 32px',
-        height: '64px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '36px', height: '36px',
-            background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-            borderRadius: '10px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ color: 'white', fontWeight: '800', fontSize: '16px' }}>F</span>
+        {/* Page Header */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ color: theme.gold, fontSize: '12px', fontWeight: '700', letterSpacing: '2px', marginBottom: '8px' }}>
+            PORTFOLIO ANALYSIS
           </div>
-          <span style={{ fontSize: '20px', fontWeight: '800', ...gradientText }}>Finvra</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            fontSize: '11px', color: '#6366F1',
-            background: 'rgba(99,102,241,0.08)',
-            padding: '4px 10px', borderRadius: '20px',
-            fontWeight: '600',
-          }}>
-            🇮🇳 NSE · NIFTY 50
-          </span>
-        </div>
-      </nav>
-
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 60px' }}>
-
-        {/* HERO */}
-        <div style={{ textAlign: 'center', padding: '56px 0 40px' }}>
-          <div style={{
-            display: 'inline-block',
-            background: 'rgba(99,102,241,0.08)',
-            border: '1px solid rgba(99,102,241,0.2)',
-            borderRadius: '20px',
-            padding: '6px 16px',
-            fontSize: '12px',
-            fontWeight: '600',
-            color: '#6366F1',
-            marginBottom: '20px',
-            letterSpacing: '0.5px',
-          }}>
-            ✦ FREE · INSTITUTIONAL GRADE · REAL NSE DATA
-          </div>
-          <h1 style={{
-            fontSize: '52px',
-            fontWeight: '900',
-            lineHeight: 1.1,
-            marginBottom: '16px',
-            color: '#0F172A',
-          }}>
-            Analyze your portfolio
-            <br />
-            <span style={gradientText}>like a pro</span>
+          <h1 style={{ fontSize: '36px', fontWeight: '900', color: theme.white, margin: 0 }}>
+            Analyse Your Portfolio
           </h1>
-          <p style={{
-            fontSize: '18px',
-            color: '#64748B',
-            maxWidth: '520px',
-            margin: '0 auto 32px',
-            lineHeight: 1.6,
-          }}>
-            Sharpe ratio, Monte Carlo, Efficient Frontier, VaR — institutional analytics made simple for every Indian investor.
+          <p style={{ color: theme.gray, fontSize: '14px', marginTop: '8px' }}>
+            Enter your holdings below and get institutional grade analytics in seconds
           </p>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {[
-              '📊 Portfolio Health Score',
-              '🎯 Efficient Frontier',
-              '📉 Value at Risk',
-              '🔄 Monte Carlo',
-              '📄 PDF Export',
-              '📥 Excel Import',
-            ].map((f, i) => (
-              <span key={i} style={{
-                fontSize: '12px',
-                color: '#475569',
-                background: 'white',
-                border: '1px solid #E2E8F0',
-                borderRadius: '20px',
-                padding: '6px 14px',
-                fontWeight: '500',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              }}>
-                {f}
-              </span>
-            ))}
-          </div>
         </div>
 
-        {/* PORTFOLIO INPUT CARD */}
-        <div style={{ ...cardStyle, padding: '32px', marginBottom: '24px' }}>
+        {/* Input Card */}
+        <div style={{
+          background:   theme.navyCard,
+          border:       `1px solid ${theme.border}`,
+          borderRadius: '20px',
+          padding:      '32px',
+          marginBottom: '24px',
+        }}>
 
-          {/* Mode Toggle + Import Button */}
+          {/* Mode Toggle + Import */}
           <div style={{
-            display: 'flex',
+            display:        'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '28px',
-            flexWrap: 'wrap',
-            gap: '12px',
+            alignItems:     'center',
+            marginBottom:   '28px',
+            flexWrap:       'wrap',
+            gap:            '12px',
           }}>
             <div style={{
-              display: 'flex',
-              background: '#F1F5F9',
+              display:      'flex',
+              background:   theme.navy,
               borderRadius: '12px',
-              padding: '4px',
+              padding:      '4px',
             }}>
               {[
                 { id: 'real', label: '💼 My Real Portfolio' },
@@ -314,44 +212,41 @@ function App() {
                   key={m.id}
                   onClick={() => setMode(m.id)}
                   style={{
-                    padding: '8px 20px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '13px',
+                    padding:    '8px 20px',
+                    borderRadius:'10px',
+                    border:     'none',
+                    cursor:     'pointer',
+                    fontSize:   '13px',
                     fontWeight: '600',
                     transition: 'all 0.2s',
                     background: mode === m.id
-                      ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
+                      ? `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`
                       : 'transparent',
-                    color: mode === m.id ? 'white' : '#64748B',
-                    boxShadow: mode === m.id ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                    color:      mode === m.id ? theme.navyDark : theme.gray,
+                    boxShadow:  mode === m.id ? '0 4px 12px rgba(201,168,76,0.3)' : 'none',
                   }}
                 >
                   {m.label}
                 </button>
               ))}
             </div>
-
-            {/* Import Excel Button — only in real mode */}
-            {mode === 'real' && (
-              <ImportExcel onImport={handleImport} />
-            )}
+            {mode === 'real' && <ImportExcel onImport={handleImport} />}
           </div>
 
+          {/* Real Portfolio */}
           {mode === 'real' && (
             <div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #F1F5F9' }}>
+                    <tr style={{ borderBottom: `2px solid ${theme.border}` }}>
                       {['Stock', 'Qty', 'Avg Buy Price (₹)', 'Amount Invested', 'Weight %', ''].map(h => (
                         <th key={h} style={{
-                          textAlign: 'left',
-                          padding: '8px 12px 12px 0',
-                          color: '#94A3B8',
-                          fontWeight: '600',
-                          fontSize: '11px',
+                          textAlign:     'left',
+                          padding:       '8px 12px 12px 0',
+                          color:         theme.gray,
+                          fontWeight:    '600',
+                          fontSize:      '11px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                         }}>{h}</th>
@@ -360,7 +255,7 @@ function App() {
                   </thead>
                   <tbody>
                     {holdingCalcs.map((h, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                      <tr key={i} style={{ borderBottom: `1px solid rgba(201,168,76,0.05)` }}>
                         <td style={{ padding: '10px 12px 10px 0' }}>
                           <StockSearch
                             value={h.ticker}
@@ -376,13 +271,14 @@ function App() {
                           <input
                             type="number"
                             style={{
-                              border: '1.5px solid #E2E8F0',
+                              border:       `1.5px solid ${theme.border}`,
                               borderRadius: '10px',
-                              padding: '8px 12px',
-                              width: '88px',
-                              fontSize: '13px',
-                              outline: 'none',
-                              transition: 'border-color 0.2s',
+                              padding:      '8px 12px',
+                              width:        '88px',
+                              fontSize:     '13px',
+                              outline:      'none',
+                              background:   theme.navy,
+                              color:        theme.white,
                             }}
                             value={h.qty || ''}
                             onChange={e => {
@@ -392,21 +288,22 @@ function App() {
                             }}
                             placeholder="0"
                             min="0"
-                            onFocus={e => e.target.style.borderColor = '#6366F1'}
-                            onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                            onFocus={e => e.target.style.borderColor = theme.gold}
+                            onBlur={e => e.target.style.borderColor = theme.border}
                           />
                         </td>
                         <td style={{ padding: '10px 12px 10px 0' }}>
                           <input
                             type="number"
                             style={{
-                              border: '1.5px solid #E2E8F0',
+                              border:       `1.5px solid ${theme.border}`,
                               borderRadius: '10px',
-                              padding: '8px 12px',
-                              width: '110px',
-                              fontSize: '13px',
-                              outline: 'none',
-                              transition: 'border-color 0.2s',
+                              padding:      '8px 12px',
+                              width:        '110px',
+                              fontSize:     '13px',
+                              outline:      'none',
+                              background:   theme.navy,
+                              color:        theme.white,
                             }}
                             value={h.avgPrice || ''}
                             onChange={e => {
@@ -417,23 +314,23 @@ function App() {
                             placeholder="0.00"
                             min="0"
                             step="0.01"
-                            onFocus={e => e.target.style.borderColor = '#6366F1'}
-                            onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                            onFocus={e => e.target.style.borderColor = theme.gold}
+                            onBlur={e => e.target.style.borderColor = theme.border}
                           />
                         </td>
                         <td style={{ padding: '10px 12px 10px 0' }}>
-                          <span style={{ fontWeight: '600', color: '#1E293B', fontSize: '13px' }}>
+                          <span style={{ fontWeight: '600', color: theme.white, fontSize: '13px' }}>
                             {h.amount > 0 ? formatINR(h.amount) : '—'}
                           </span>
                         </td>
                         <td style={{ padding: '10px 12px 10px 0' }}>
                           <span style={{
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            color: h.weight > 0 ? '#6366F1' : '#CBD5E1',
-                            background: h.weight > 0 ? 'rgba(99,102,241,0.08)' : 'transparent',
-                            padding: h.weight > 0 ? '3px 8px' : '0',
-                            borderRadius: '6px',
+                            fontWeight:  '700',
+                            fontSize:    '13px',
+                            color:       h.weight > 0 ? theme.gold : theme.gray,
+                            background:  h.weight > 0 ? 'rgba(201,168,76,0.1)' : 'transparent',
+                            padding:     h.weight > 0 ? '3px 8px' : '0',
+                            borderRadius:'6px',
                           }}>
                             {h.weight > 0 ? `${h.weight.toFixed(1)}%` : '—'}
                           </span>
@@ -441,29 +338,21 @@ function App() {
                         <td style={{ padding: '10px 0' }}>
                           <button
                             onClick={() => setHoldings(holdings.filter((_, idx) => idx !== i))}
-                            style={{
-                              background: 'none', border: 'none',
-                              color: '#CBD5E1', cursor: 'pointer',
-                              fontSize: '18px', lineHeight: 1,
-                            }}
-                            onMouseEnter={e => e.target.style.color = '#EF4444'}
-                            onMouseLeave={e => e.target.style.color = '#CBD5E1'}
-                          >
-                            ×
-                          </button>
+                            style={{ background: 'none', border: 'none', color: theme.gray, cursor: 'pointer', fontSize: '18px' }}
+                            onMouseEnter={e => e.target.style.color = theme.red}
+                            onMouseLeave={e => e.target.style.color = theme.gray}
+                          >×</button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ borderTop: '2px solid #F1F5F9' }}>
-                      <td colSpan={3} style={{ padding: '12px 0 0', fontSize: '12px', fontWeight: '600', color: '#94A3B8' }}>
-                        TOTAL
-                      </td>
-                      <td style={{ padding: '12px 0 0', fontWeight: '700', color: '#1E293B', fontSize: '14px' }}>
+                    <tr style={{ borderTop: `2px solid ${theme.border}` }}>
+                      <td colSpan={3} style={{ padding: '12px 0 0', fontSize: '12px', fontWeight: '600', color: theme.gray }}>TOTAL</td>
+                      <td style={{ padding: '12px 0 0', fontWeight: '700', color: theme.white, fontSize: '14px' }}>
                         {totalInvested > 0 ? formatINR(totalInvested) : '—'}
                       </td>
-                      <td style={{ padding: '12px 0 0', fontWeight: '700', color: '#22C55E', fontSize: '14px' }}>
+                      <td style={{ padding: '12px 0 0', fontWeight: '700', color: theme.green, fontSize: '14px' }}>
                         {totalInvested > 0 ? '100%' : '—'}
                       </td>
                       <td></td>
@@ -474,24 +363,16 @@ function App() {
               <button
                 onClick={() => setHoldings([...holdings, { ticker: '', qty: 0, avgPrice: 0 }])}
                 style={{
-                  marginTop: '16px',
-                  background: 'none',
-                  border: '1.5px dashed #C7D2FE',
+                  marginTop:    '16px',
+                  background:   'none',
+                  border:       `1.5px dashed rgba(201,168,76,0.3)`,
                   borderRadius: '10px',
-                  padding: '8px 16px',
-                  color: '#6366F1',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-                onMouseEnter={e => {
-                  e.target.style.background = 'rgba(99,102,241,0.05)'
-                  e.target.style.borderColor = '#6366F1'
-                }}
-                onMouseLeave={e => {
-                  e.target.style.background = 'none'
-                  e.target.style.borderColor = '#C7D2FE'
+                  padding:      '8px 16px',
+                  color:        theme.gold,
+                  fontSize:     '13px',
+                  fontWeight:   '600',
+                  cursor:       'pointer',
+                  width:        '100%',
                 }}
               >
                 + Add Stock
@@ -499,6 +380,7 @@ function App() {
             </div>
           )}
 
+          {/* Quick Mode */}
           {mode === 'quick' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {quickTickers.map((ticker, i) => (
@@ -515,12 +397,14 @@ function App() {
                   <input
                     type="number"
                     style={{
-                      border: '1.5px solid #E2E8F0',
+                      border: `1.5px solid ${theme.border}`,
                       borderRadius: '10px',
                       padding: '8px 12px',
                       width: '90px',
                       fontSize: '13px',
                       outline: 'none',
+                      background: theme.navy,
+                      color: theme.white,
                     }}
                     value={quickWeights[i] || ''}
                     onChange={e => {
@@ -529,47 +413,29 @@ function App() {
                       setQuickWeights(w)
                     }}
                     placeholder="Weight %"
-                    min="0"
-                    max="100"
+                    min="0" max="100"
                   />
-                  <span style={{ fontSize: '13px', color: '#94A3B8' }}>%</span>
+                  <span style={{ fontSize: '13px', color: theme.gray }}>%</span>
                   <button
                     onClick={() => {
                       setQuickTickers(quickTickers.filter((_, idx) => idx !== i))
                       setQuickWeights(quickWeights.filter((_, idx) => idx !== i))
                     }}
-                    style={{
-                      background: 'none', border: 'none',
-                      color: '#CBD5E1', cursor: 'pointer', fontSize: '18px',
-                    }}
-                    onMouseEnter={e => e.target.style.color = '#EF4444'}
-                    onMouseLeave={e => e.target.style.color = '#CBD5E1'}
-                  >
-                    ×
-                  </button>
+                    style={{ background: 'none', border: 'none', color: theme.gray, cursor: 'pointer', fontSize: '18px' }}
+                    onMouseEnter={e => e.target.style.color = theme.red}
+                    onMouseLeave={e => e.target.style.color = theme.gray}
+                  >×</button>
                 </div>
               ))}
-              <div style={{
-                fontSize: '13px', fontWeight: '600',
-                color: quickTotal === 100 ? '#22C55E' : '#EF4444',
-              }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: quickTotal === 100 ? theme.green : theme.red }}>
                 Total: {quickTotal}% {quickTotal === 100 ? '✓' : '— must equal 100%'}
               </div>
               <button
-                onClick={() => {
-                  setQuickTickers([...quickTickers, ''])
-                  setQuickWeights([...quickWeights, 0])
-                }}
+                onClick={() => { setQuickTickers([...quickTickers, '']); setQuickWeights([...quickWeights, 0]) }}
                 style={{
-                  background: 'none',
-                  border: '1.5px dashed #C7D2FE',
-                  borderRadius: '10px',
-                  padding: '8px 16px',
-                  color: '#6366F1',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  width: '100%',
+                  background: 'none', border: `1.5px dashed rgba(201,168,76,0.3)`,
+                  borderRadius: '10px', padding: '8px 16px',
+                  color: theme.gold, fontSize: '13px', fontWeight: '600', cursor: 'pointer', width: '100%',
                 }}
               >
                 + Add Stock
@@ -577,28 +443,24 @@ function App() {
             </div>
           )}
 
-          {/* Period Selector */}
+          {/* Period */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '24px' }}>
-            <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: '600', marginRight: '4px' }}>
-              PERIOD
-            </span>
+            <span style={{ fontSize: '12px', color: theme.gray, fontWeight: '600', marginRight: '4px', letterSpacing: '1px' }}>PERIOD</span>
             {['1y', '2y', '3y', '5y'].map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: '8px',
-                  border: period === p ? 'none' : '1.5px solid #E2E8F0',
-                  cursor: 'pointer',
-                  fontSize: '13px',
+                  padding:    '6px 16px',
+                  borderRadius:'8px',
+                  border:     period === p ? 'none' : `1.5px solid ${theme.border}`,
+                  cursor:     'pointer',
+                  fontSize:   '13px',
                   fontWeight: '600',
                   transition: 'all 0.2s',
-                  background: period === p
-                    ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
-                    : 'white',
-                  color: period === p ? 'white' : '#64748B',
-                  boxShadow: period === p ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                  background: period === p ? `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})` : 'transparent',
+                  color:      period === p ? theme.navyDark : theme.gray,
+                  boxShadow:  period === p ? '0 4px 12px rgba(201,168,76,0.3)' : 'none',
                 }}
               >
                 {p}
@@ -611,49 +473,43 @@ function App() {
             onClick={handleAnalyze}
             disabled={loading || !isReady}
             style={{
-              marginTop: '20px',
-              width: '100%',
-              padding: '16px',
+              marginTop:    '20px',
+              width:        '100%',
+              padding:      '16px',
               borderRadius: '14px',
-              border: 'none',
-              cursor: loading || !isReady ? 'not-allowed' : 'pointer',
-              fontSize: '15px',
-              fontWeight: '700',
-              color: 'white',
-              background: loading || !isReady
-                ? '#CBD5E1'
-                : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-              boxShadow: loading || !isReady
-                ? 'none'
-                : '0 8px 24px rgba(99,102,241,0.4)',
-              transition: 'all 0.2s',
-              letterSpacing: '0.3px',
+              border:       'none',
+              cursor:       loading || !isReady ? 'not-allowed' : 'pointer',
+              fontSize:     '15px',
+              fontWeight:   '700',
+              color:        loading || !isReady ? theme.gray : theme.navyDark,
+              background:   loading || !isReady
+                ? theme.navy
+                : `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`,
+              boxShadow:    loading || !isReady ? 'none' : '0 8px 24px rgba(201,168,76,0.4)',
+              transition:   'all 0.2s',
+              letterSpacing:'0.3px',
             }}
           >
             {loading
               ? isWakingUp
                 ? '⏳ Waking up server... please wait 30-60 seconds on first load'
                 : '🔄 Analyzing your portfolio...'
-              : '✦ Analyze Portfolio'
+              : '✦ Analyse Portfolio'
             }
           </button>
 
           {error && (
             <div style={{
-              marginTop: '12px',
-              padding: '12px 16px',
-              background: '#FEF2F2',
-              border: '1px solid #FECACA',
-              borderRadius: '10px',
-              color: '#EF4444',
-              fontSize: '13px',
+              marginTop: '12px', padding: '12px 16px',
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: '10px', color: theme.red, fontSize: '13px',
             }}>
               ⚠️ {error}
             </div>
           )}
         </div>
 
-        {/* RESULTS */}
+        {/* Results */}
         {result && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
@@ -666,63 +522,46 @@ function App() {
               const explain = getExplain(result)
               const cards = [
                 {
-                  label: 'Annual Return',
-                  value: formatPct(result.summary.annual_return_pct),
-                  explain: explain.return,
-                  gradient: result.summary.annual_return_pct >= 0
-                    ? 'linear-gradient(135deg, #22C55E, #16A34A)'
-                    : 'linear-gradient(135deg, #EF4444, #DC2626)',
-                  bg: result.summary.annual_return_pct >= 0 ? '#F0FDF4' : '#FEF2F2',
-                  border: result.summary.annual_return_pct >= 0 ? '#BBF7D0' : '#FECACA',
+                  label: 'Annual Return', value: formatPct(result.summary.annual_return_pct), explain: explain.return,
+                  gradient: result.summary.annual_return_pct >= 0 ? 'linear-gradient(135deg, #22C55E, #16A34A)' : 'linear-gradient(135deg, #EF4444, #DC2626)',
+                  bg: result.summary.annual_return_pct >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                  border: result.summary.annual_return_pct >= 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
                 },
                 {
-                  label: 'Volatility',
-                  value: formatPct(result.summary.annual_volatility_pct),
-                  explain: explain.volatility,
+                  label: 'Volatility', value: formatPct(result.summary.annual_volatility_pct), explain: explain.volatility,
                   gradient: 'linear-gradient(135deg, #F97316, #EA580C)',
-                  bg: '#FFF7ED',
-                  border: '#FED7AA',
+                  bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)',
                 },
                 {
-                  label: 'Sharpe Ratio',
-                  value: result.summary.sharpe_ratio.toFixed(2),
-                  explain: explain.sharpe,
-                  gradient: 'linear-gradient(135deg, #6366F1, #4F46E5)',
-                  bg: '#EEF2FF',
-                  border: '#C7D2FE',
+                  label: 'Sharpe Ratio', value: result.summary.sharpe_ratio.toFixed(2), explain: explain.sharpe,
+                  gradient: `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`,
+                  bg: 'rgba(201,168,76,0.08)', border: theme.border,
                 },
                 {
-                  label: 'Portfolio Beta',
-                  value: result.summary.portfolio_beta.toFixed(2),
-                  explain: explain.beta,
+                  label: 'Portfolio Beta', value: result.summary.portfolio_beta.toFixed(2), explain: explain.beta,
                   gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
-                  bg: '#F5F3FF',
-                  border: '#DDD6FE',
+                  bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)',
                 },
               ]
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                   {cards.map((card, i) => (
                     <div key={i} style={{
-                      background: card.bg,
-                      border: `1px solid ${card.border}`,
-                      borderRadius: '16px',
-                      padding: '20px',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                      background: card.bg, border: `1px solid ${card.border}`,
+                      borderRadius: '16px', padding: '20px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                     }}>
-                      <p style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>
+                      <p style={{ fontSize: '11px', color: theme.gray, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>
                         {card.label}
                       </p>
                       <p style={{
                         fontSize: '28px', fontWeight: '800', margin: '0 0 8px',
                         background: card.gradient,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                       }}>
                         {card.value}
                       </p>
-                      <p style={{ fontSize: '11px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                      <p style={{ fontSize: '11px', color: theme.gray, margin: 0, lineHeight: 1.5 }}>
                         {card.explain}
                       </p>
                     </div>
@@ -733,30 +572,17 @@ function App() {
 
             {result?.score && <PortfolioScore score={result.score} />}
 
-            {/* Individual Stocks Table */}
-            <div style={{ ...cardStyle, overflow: 'hidden' }}>
-              <div style={{
-                padding: '20px 24px', borderBottom: '1px solid #F1F5F9',
-                display: 'flex', alignItems: 'center', gap: '10px',
-              }}>
-                <div style={{
-                  width: '8px', height: '8px',
-                  background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-                  borderRadius: '50%',
-                }} />
-                <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1E293B' }}>
-                  Individual Stocks
-                </h2>
+            {/* Stocks Table */}
+            <div style={{ background: theme.navyCard, border: `1px solid ${theme.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '8px', height: '8px', background: `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`, borderRadius: '50%' }} />
+                <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: theme.white }}>Individual Stocks</h2>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead style={{ background: '#F8FAFC' }}>
+                <thead style={{ background: theme.navy }}>
                   <tr>
                     {['Stock', 'Weight', 'Return', 'Volatility', 'Beta', 'Risk Contribution'].map(h => (
-                      <th key={h} style={{
-                        padding: '12px 16px', textAlign: 'left',
-                        fontSize: '11px', fontWeight: '600', color: '#94A3B8',
-                        textTransform: 'uppercase', letterSpacing: '0.5px',
-                      }}>
+                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: theme.gray, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {h}
                       </th>
                     ))}
@@ -764,24 +590,24 @@ function App() {
                 </thead>
                 <tbody>
                   {result.stocks.map((stock, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid #F8FAFC', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#FAFBFF'}
+                    <tr key={i} style={{ borderTop: `1px solid rgba(201,168,76,0.05)`, transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.03)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '14px 16px', fontWeight: '700', color: '#1E293B' }}>{stock.ticker}</td>
-                      <td style={{ padding: '14px 16px', color: '#64748B' }}>{stock.weight}%</td>
+                      <td style={{ padding: '14px 16px', fontWeight: '700', color: theme.white }}>{stock.ticker}</td>
+                      <td style={{ padding: '14px 16px', color: theme.gray }}>{stock.weight}%</td>
                       <td style={{ padding: '14px 16px', fontWeight: '600' }}>
                         <span style={{
-                          color: stock.annual_return >= 0 ? '#16A34A' : '#DC2626',
-                          background: stock.annual_return >= 0 ? '#F0FDF4' : '#FEF2F2',
+                          color: stock.annual_return >= 0 ? theme.green : theme.red,
+                          background: stock.annual_return >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
                           padding: '3px 8px', borderRadius: '6px', fontSize: '12px',
                         }}>
                           {formatPct(stock.annual_return)}
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px', color: '#F97316' }}>{formatPct(stock.annual_volatility)}</td>
-                      <td style={{ padding: '14px 16px', color: '#64748B' }}>{stock.beta.toFixed(2)}</td>
-                      <td style={{ padding: '14px 16px', color: '#64748B' }}>{stock.risk_contribution_pct.toFixed(2)}%</td>
+                      <td style={{ padding: '14px 16px', color: theme.gray }}>{stock.beta.toFixed(2)}</td>
+                      <td style={{ padding: '14px 16px', color: theme.gray }}>{stock.risk_contribution_pct.toFixed(2)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -789,39 +615,44 @@ function App() {
             </div>
 
             <RiskReturnChart stocks={result.stocks} />
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <AllocationChart stocks={result.stocks} sharedHeight={sharedChartHeight} />
               <RiskContributionChart stocks={result.stocks} sharedHeight={sharedChartHeight} />
             </div>
-
             {benchData && <BenchmarkChart data={benchData} />}
             {optData && <PortfolioOptimizationChart data={optData} />}
             <CorrelationMatrix correlationMatrix={result.correlation_matrix} />
             {varData && <VaRChart data={varData} />}
-            {returnsData && (
-              <SensitivityAnalysis stocks={result.stocks} returnsData={returnsData} />
-            )}
+            {returnsData && <SensitivityAnalysis stocks={result.stocks} returnsData={returnsData} />}
 
           </div>
         )}
-
-        {/* FOOTER */}
-        <div style={{
-          textAlign: 'center', marginTop: '60px',
-          paddingTop: '32px', borderTop: '1px solid rgba(99,102,241,0.1)',
-        }}>
-          <span style={{ fontSize: '20px', fontWeight: '800', ...gradientText }}>Finvra</span>
-          <p style={{ color: '#94A3B8', fontSize: '12px', marginTop: '8px' }}>
-            Indian Equity Portfolio Analysis · Real NSE Data · Not financial advice
-          </p>
-        </div>
-
       </div>
-
       {result?.insights && <InsightsPanel insights={result.insights} />}
     </div>
   )
 }
 
-export default App
+export default function App() {
+  // Keep backend alive
+  useEffect(() => {
+    const keepAlive = () => fetch('https://finvra-backend.onrender.com').catch(() => {})
+    keepAlive()
+    const interval = setInterval(keepAlive, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div>
+      <Navbar />
+      <Routes>
+        <Route path="/"         element={<Home />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/analyse"  element={<AnalysePage />} />
+        <Route path="/blog"     element={<Blog />} />
+        <Route path="/contact"  element={<Contact />} />
+      </Routes>
+      <Footer />
+    </div>
+  )
+}
