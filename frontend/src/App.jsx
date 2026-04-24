@@ -13,6 +13,7 @@ import InsightsPanel from './components/InsightsPanel'
 import PortfolioScore from './components/PortfolioScore'
 import StockSearch from './components/StockSearch'
 import ExportPDF from './components/ExportPDF'
+import ImportExcel from './components/ImportExcel'
 
 const formatINR = (value) =>
   new Intl.NumberFormat('en-IN', {
@@ -58,11 +59,10 @@ function App() {
   const [error, setError] = useState(null)
   const [isWakingUp, setIsWakingUp] = useState(false)
 
-  // Keep backend alive — ping every 10 minutes
+  // Keep backend alive
   useEffect(() => {
     const keepAlive = () => {
-      fetch('https://finvra-backend.onrender.com')
-        .catch(() => {})
+      fetch('https://finvra-backend.onrender.com').catch(() => {})
     }
     keepAlive()
     const interval = setInterval(keepAlive, 10 * 60 * 1000)
@@ -83,6 +83,12 @@ function App() {
   }, [holdings])
 
   const totalInvested = holdingCalcs[0]?.total || 0
+
+  const handleImport = (importedHoldings) => {
+    setHoldings(importedHoldings)
+    setResult(null)
+    setError(null)
+  }
 
   const handleAnalyze = async () => {
     setLoading(true)
@@ -182,7 +188,7 @@ function App() {
       transition: 'padding-right 0.3s ease',
     }}>
 
-      {/* ── NAVBAR ── */}
+      {/* NAVBAR */}
       <nav style={{
         background: 'rgba(255,255,255,0.85)',
         backdropFilter: 'blur(12px)',
@@ -221,7 +227,7 @@ function App() {
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 60px' }}>
 
-        {/* ── HERO ── */}
+        {/* HERO */}
         <div style={{ textAlign: 'center', padding: '56px 0 40px' }}>
           <div style={{
             display: 'inline-block',
@@ -257,7 +263,6 @@ function App() {
           }}>
             Sharpe ratio, Monte Carlo, Efficient Frontier, VaR — institutional analytics made simple for every Indian investor.
           </p>
-
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
               '📊 Portfolio Health Score',
@@ -265,6 +270,7 @@ function App() {
               '📉 Value at Risk',
               '🔄 Monte Carlo',
               '📄 PDF Export',
+              '📥 Excel Import',
             ].map((f, i) => (
               <span key={i} style={{
                 fontSize: '12px',
@@ -282,42 +288,55 @@ function App() {
           </div>
         </div>
 
-        {/* ── PORTFOLIO INPUT CARD ── */}
+        {/* PORTFOLIO INPUT CARD */}
         <div style={{ ...cardStyle, padding: '32px', marginBottom: '24px' }}>
 
+          {/* Mode Toggle + Import Button */}
           <div style={{
             display: 'flex',
-            background: '#F1F5F9',
-            borderRadius: '12px',
-            padding: '4px',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: '28px',
-            width: 'fit-content',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}>
-            {[
-              { id: 'real', label: '💼 My Real Portfolio' },
-              { id: 'quick', label: '⚡ Quick Analysis' },
-            ].map(m => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  background: mode === m.id
-                    ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
-                    : 'transparent',
-                  color: mode === m.id ? 'white' : '#64748B',
-                  boxShadow: mode === m.id ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
-                }}
-              >
-                {m.label}
-              </button>
-            ))}
+            <div style={{
+              display: 'flex',
+              background: '#F1F5F9',
+              borderRadius: '12px',
+              padding: '4px',
+            }}>
+              {[
+                { id: 'real', label: '💼 My Real Portfolio' },
+                { id: 'quick', label: '⚡ Quick Analysis' },
+              ].map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    background: mode === m.id
+                      ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
+                      : 'transparent',
+                    color: mode === m.id ? 'white' : '#64748B',
+                    boxShadow: mode === m.id ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Import Excel Button — only in real mode */}
+            {mode === 'real' && (
+              <ImportExcel onImport={handleImport} />
+            )}
           </div>
 
           {mode === 'real' && (
@@ -426,7 +445,6 @@ function App() {
                               background: 'none', border: 'none',
                               color: '#CBD5E1', cursor: 'pointer',
                               fontSize: '18px', lineHeight: 1,
-                              transition: 'color 0.2s',
                             }}
                             onMouseEnter={e => e.target.style.color = '#EF4444'}
                             onMouseLeave={e => e.target.style.color = '#CBD5E1'}
@@ -465,7 +483,6 @@ function App() {
                   fontSize: '13px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
                   width: '100%',
                 }}
                 onMouseEnter={e => {
@@ -533,8 +550,7 @@ function App() {
                 </div>
               ))}
               <div style={{
-                fontSize: '13px',
-                fontWeight: '600',
+                fontSize: '13px', fontWeight: '600',
                 color: quickTotal === 100 ? '#22C55E' : '#EF4444',
               }}>
                 Total: {quickTotal}% {quickTotal === 100 ? '✓' : '— must equal 100%'}
@@ -637,11 +653,10 @@ function App() {
           )}
         </div>
 
-        {/* ── RESULTS ── */}
+        {/* RESULTS */}
         {result && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Export Button */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <ExportPDF result={result} benchData={benchData} varData={varData} />
             </div>
@@ -699,9 +714,7 @@ function App() {
                         {card.label}
                       </p>
                       <p style={{
-                        fontSize: '28px',
-                        fontWeight: '800',
-                        margin: '0 0 8px',
+                        fontSize: '28px', fontWeight: '800', margin: '0 0 8px',
                         background: card.gradient,
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
@@ -718,17 +731,13 @@ function App() {
               )
             })()}
 
-            {/* Portfolio Score */}
             {result?.score && <PortfolioScore score={result.score} />}
 
             {/* Individual Stocks Table */}
             <div style={{ ...cardStyle, overflow: 'hidden' }}>
               <div style={{
-                padding: '20px 24px',
-                borderBottom: '1px solid #F1F5F9',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
+                padding: '20px 24px', borderBottom: '1px solid #F1F5F9',
+                display: 'flex', alignItems: 'center', gap: '10px',
               }}>
                 <div style={{
                   width: '8px', height: '8px',
@@ -744,13 +753,9 @@ function App() {
                   <tr>
                     {['Stock', 'Weight', 'Return', 'Volatility', 'Beta', 'Risk Contribution'].map(h => (
                       <th key={h} style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        color: '#94A3B8',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
+                        padding: '12px 16px', textAlign: 'left',
+                        fontSize: '11px', fontWeight: '600', color: '#94A3B8',
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
                       }}>
                         {h}
                       </th>
@@ -759,24 +764,17 @@ function App() {
                 </thead>
                 <tbody>
                   {result.stocks.map((stock, i) => (
-                    <tr key={i} style={{
-                      borderTop: '1px solid #F8FAFC',
-                      transition: 'background 0.15s',
-                    }}
+                    <tr key={i} style={{ borderTop: '1px solid #F8FAFC', transition: 'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#FAFBFF'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '14px 16px', fontWeight: '700', color: '#1E293B' }}>
-                        {stock.ticker}
-                      </td>
+                      <td style={{ padding: '14px 16px', fontWeight: '700', color: '#1E293B' }}>{stock.ticker}</td>
                       <td style={{ padding: '14px 16px', color: '#64748B' }}>{stock.weight}%</td>
                       <td style={{ padding: '14px 16px', fontWeight: '600' }}>
                         <span style={{
                           color: stock.annual_return >= 0 ? '#16A34A' : '#DC2626',
                           background: stock.annual_return >= 0 ? '#F0FDF4' : '#FEF2F2',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
+                          padding: '3px 8px', borderRadius: '6px', fontSize: '12px',
                         }}>
                           {formatPct(stock.annual_return)}
                         </span>
@@ -790,7 +788,6 @@ function App() {
               </table>
             </div>
 
-            {/* Charts */}
             <RiskReturnChart stocks={result.stocks} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -809,12 +806,10 @@ function App() {
           </div>
         )}
 
-        {/* ── FOOTER ── */}
+        {/* FOOTER */}
         <div style={{
-          textAlign: 'center',
-          marginTop: '60px',
-          paddingTop: '32px',
-          borderTop: '1px solid rgba(99,102,241,0.1)',
+          textAlign: 'center', marginTop: '60px',
+          paddingTop: '32px', borderTop: '1px solid rgba(99,102,241,0.1)',
         }}>
           <span style={{ fontSize: '20px', fontWeight: '800', ...gradientText }}>Finvra</span>
           <p style={{ color: '#94A3B8', fontSize: '12px', marginTop: '8px' }}>
@@ -824,7 +819,6 @@ function App() {
 
       </div>
 
-      {/* Floating Insights Panel */}
       {result?.insights && <InsightsPanel insights={result.insights} />}
     </div>
   )
