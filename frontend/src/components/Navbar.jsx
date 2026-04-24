@@ -7,12 +7,13 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const links = [
-    { path: '/',         label: 'Home' },
-    { path: '/services', label: 'Services' },
-    { path: '/analyse',  label: 'Analyse Portfolio' },
-    { path: '/blog',     label: 'Blog & News' },
-    { path: '/contact',  label: 'Contact Us' },
-  ]
+  { path: '/',                label: 'Home' },
+  { path: '/services',        label: 'Services' },
+  { path: '/analyse',         label: 'Analyse Portfolio' },
+  { path: '/sip-calculator',  label: 'SIP Calculator' },
+  { path: '/blog',            label: 'Blog & News' },
+  { path: '/contact',         label: 'Contact Us' },
+]
 
   return (
     <nav style={{

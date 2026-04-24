@@ -22,6 +22,7 @@ import PortfolioScore from './components/PortfolioScore'
 import StockSearch from './components/StockSearch'
 import ExportPDF from './components/ExportPDF'
 import ImportExcel from './components/ImportExcel'
+import SIPCalculator from './pages/SIPCalculator'
 
 const formatINR = (value) =>
   new Intl.NumberFormat('en-IN', {
@@ -651,6 +652,7 @@ export default function App() {
         <Route path="/analyse"  element={<AnalysePage />} />
         <Route path="/blog"     element={<Blog />} />
         <Route path="/contact"  element={<Contact />} />
+        <Route path="/sip-calculator" element={<SIPCalculator />} />
       </Routes>
       <Footer />
     </div>

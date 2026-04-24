@@ -62,6 +62,16 @@ const services = [
     link: '/analyse',
     highlight: false,
   },
+  {
+  icon: '📅',
+  title: 'SIP Calculator',
+  subtitle: 'Plan Your Wealth Creation',
+  desc: 'Calculate how your monthly SIP investments grow over time with the power of compounding. Includes inflation adjustment and year-by-year breakdown.',
+  features: ['SIP & Lumpsum modes', 'Inflation adjustment', 'Interactive sliders', 'Year-by-year breakdown', 'Growth chart'],
+  cta: 'Calculate Now',
+  link: '/sip-calculator',
+  highlight: false,
+},
 ]
 
 export default function Services() {
