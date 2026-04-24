@@ -61,6 +61,14 @@ def _get_scaling(n_stocks):
         return 5000, 60
 
 
+def _is_valid(val):
+    """Check if a float value is valid (not nan or inf)"""
+    try:
+        return val == val and abs(val) != float('inf')
+    except Exception:
+        return False
+
+
 def _handle_error(e):
     error_msg = str(e)
     if "index -1 is out of bounds" in error_msg or "0 with size 0" in error_msg or "No data" in error_msg:
@@ -249,29 +257,53 @@ async def optimization_chart(req: PortfolioRequest):
 
         min_var_weights = _get_min_variance_weights(returns)
 
+        # Filter out NaN and Inf values from simulations
+        clean_simulations = [
+            {
+                "risk":   mc["risks"][i],
+                "return": mc["returns"][i],
+                "sharpe": mc["sharpes"][i],
+            }
+            for i in range(len(mc["risks"]))
+            if _is_valid(mc["risks"][i])
+            and _is_valid(mc["returns"][i])
+            and _is_valid(mc["sharpes"][i])
+        ]
+
+        # Filter out NaN and Inf values from frontier
+        clean_frontier = [
+            {
+                "risk":   ef["risks"][i],
+                "return": ef["returns"][i],
+            }
+            for i in range(len(ef["risks"]))
+            if _is_valid(ef["risks"][i])
+            and _is_valid(ef["returns"][i])
+        ]
+
+        # Clean current portfolio values
+        current = {
+            "risk":   float(analytics["summary"]["annual_volatility_pct"]),
+            "return": float(analytics["summary"]["annual_return_pct"]),
+            "sharpe": float(analytics["summary"]["sharpe_ratio"]),
+        }
+
+        # Clean min_variance and max_sharpe
+        min_variance = {
+            "risk":   float(ef["min_variance"]["risk"]) if _is_valid(ef["min_variance"]["risk"]) else 0,
+            "return": float(ef["min_variance"]["return"]) if _is_valid(ef["min_variance"]["return"]) else 0,
+        }
+        max_sharpe = {
+            "risk":   float(ef["max_sharpe"]["risk"]) if _is_valid(ef["max_sharpe"]["risk"]) else 0,
+            "return": float(ef["max_sharpe"]["return"]) if _is_valid(ef["max_sharpe"]["return"]) else 0,
+        }
+
         return {
-            "simulations": [
-                {
-                    "risk":   mc["risks"][i],
-                    "return": mc["returns"][i],
-                    "sharpe": mc["sharpes"][i],
-                }
-                for i in range(len(mc["risks"]))
-            ],
-            "frontier": [
-                {
-                    "risk":   ef["risks"][i],
-                    "return": ef["returns"][i],
-                }
-                for i in range(len(ef["risks"]))
-            ],
-            "current_portfolio": {
-                "risk":   analytics["summary"]["annual_volatility_pct"],
-                "return": analytics["summary"]["annual_return_pct"],
-                "sharpe": analytics["summary"]["sharpe_ratio"],
-            },
-            "min_variance":         ef["min_variance"],
-            "max_sharpe":           ef["max_sharpe"],
+            "simulations":        clean_simulations,
+            "frontier":           clean_frontier,
+            "current_portfolio":  current,
+            "min_variance":       min_variance,
+            "max_sharpe":         max_sharpe,
             "best_sharpe_weights":  mc["best_sharpe"]["weights"],
             "min_variance_weights": min_var_weights,
         }
