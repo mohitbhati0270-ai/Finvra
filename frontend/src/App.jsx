@@ -382,7 +382,7 @@ function AnalysePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <ExportPDF result={result} benchData={benchData} varData={varData} />
+              <ExportPDF result={result} benchData={benchData} varData={varData} optData={optData} />
             </div>
 
             {(() => {
