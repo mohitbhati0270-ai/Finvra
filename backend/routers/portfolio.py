@@ -16,6 +16,23 @@ from services.analytics_service import (
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 
+def _deduplicate_tickers(tickers, weights):
+    """Remove duplicate tickers, merging their weights."""
+    seen = {}
+    for t, w in zip(tickers, weights):
+        t_clean = t.strip().upper()
+        if t_clean in seen:
+            seen[t_clean] += w
+        else:
+            seen[t_clean] = w
+    tickers_out = list(seen.keys())
+    weights_out = list(seen.values())
+    total = sum(weights_out)
+    if total > 0:
+        weights_out = [w / total for w in weights_out]
+    return tickers_out, weights_out
+
+
 def _get_min_variance_weights(returns):
     mean_returns = returns.mean() * 252
     cov_matrix   = returns.cov() * 252
@@ -69,6 +86,17 @@ def _is_valid(val):
         return False
 
 
+def _safe_float(val, default=0.0):
+    """Convert to float safely, returning default if nan/inf."""
+    try:
+        f = float(val)
+        if f != f or abs(f) == float('inf'):
+            return default
+        return f
+    except Exception:
+        return default
+
+
 def _handle_error(e):
     error_msg = str(e)
     if "index -1 is out of bounds" in error_msg or "0 with size 0" in error_msg or "No data" in error_msg:
@@ -87,12 +115,14 @@ def _handle_error(e):
 @router.post("/analyze")
 async def analyze_portfolio(req: PortfolioRequest):
     try:
-        prices    = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+
+        prices    = fetch_prices(tickers, req.period)
         returns   = get_returns(prices)
         benchmark = fetch_benchmark(req.period)
 
         n = len(returns.columns)
-        weights = _normalize_weights(req.weights, n)
+        weights = _normalize_weights(weights_dedup, n)
 
         result = compute_portfolio_analytics(
             returns=returns,
@@ -144,7 +174,8 @@ async def get_sample_tickers():
 @router.post("/monte-carlo")
 async def monte_carlo(req: PortfolioRequest):
     try:
-        prices  = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+        prices  = fetch_prices(tickers, req.period)
         returns = get_returns(prices)
         n = len(returns.columns)
         n_sims, _ = _get_scaling(n)
@@ -159,10 +190,11 @@ async def monte_carlo(req: PortfolioRequest):
 @router.post("/var")
 async def value_at_risk(req: PortfolioRequest):
     try:
-        prices  = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+        prices  = fetch_prices(tickers, req.period)
         returns = get_returns(prices)
         n = len(returns.columns)
-        weights = _normalize_weights(req.weights, n)
+        weights = _normalize_weights(weights_dedup, n)
         result  = compute_var_metrics(returns, weights)
         return result
     except HTTPException:
@@ -174,7 +206,8 @@ async def value_at_risk(req: PortfolioRequest):
 @router.post("/efficient-frontier")
 async def efficient_frontier(req: PortfolioRequest):
     try:
-        prices  = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+        prices  = fetch_prices(tickers, req.period)
         returns = get_returns(prices)
         n = len(returns.columns)
         _, n_points = _get_scaling(n)
@@ -189,7 +222,8 @@ async def efficient_frontier(req: PortfolioRequest):
 @router.post("/returns-data")
 async def get_returns_data(req: PortfolioRequest):
     try:
-        prices  = fetch_prices(req.tickers, req.period)
+        tickers, _ = _deduplicate_tickers(req.tickers, req.weights)
+        prices  = fetch_prices(tickers, req.period)
         returns = get_returns(prices)
         tickers_clean = [t.replace(".NS", "") for t in returns.columns.tolist()]
         return {
@@ -205,12 +239,13 @@ async def get_returns_data(req: PortfolioRequest):
 @router.post("/benchmark-comparison")
 async def benchmark_comparison(req: PortfolioRequest):
     try:
-        prices    = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+        prices    = fetch_prices(tickers, req.period)
         returns   = get_returns(prices)
         benchmark = fetch_benchmark(req.period)
 
         n = len(returns.columns)
-        w = _normalize_weights(req.weights, n)
+        w = _normalize_weights(weights_dedup, n)
 
         port_daily      = returns.dot(w)
         port_cumulative = ((1 + port_daily).cumprod() - 1) * 100
@@ -238,17 +273,19 @@ async def benchmark_comparison(req: PortfolioRequest):
 @router.post("/optimization-chart")
 async def optimization_chart(req: PortfolioRequest):
     try:
-        prices  = fetch_prices(req.tickers, req.period)
+        tickers, weights_dedup = _deduplicate_tickers(req.tickers, req.weights)
+
+        prices  = fetch_prices(tickers, req.period)
         returns = get_returns(prices)
 
-        n_stocks         = len(req.tickers)
+        n_stocks         = len(tickers)
         n_sims, n_points = _get_scaling(n_stocks)
 
         mc = run_monte_carlo(returns, n_simulations=n_sims)
         ef = compute_efficient_frontier(returns, n_points=n_points)
 
         n = len(returns.columns)
-        weights = _normalize_weights(req.weights, n)
+        weights = _normalize_weights(weights_dedup, n)
 
         analytics = compute_portfolio_analytics(
             returns=returns,
@@ -257,7 +294,7 @@ async def optimization_chart(req: PortfolioRequest):
 
         min_var_weights = _get_min_variance_weights(returns)
 
-        # Filter out NaN and Inf values from simulations
+        # Filter NaN/Inf from simulations
         clean_simulations = [
             {
                 "risk":   mc["risks"][i],
@@ -270,7 +307,7 @@ async def optimization_chart(req: PortfolioRequest):
             and _is_valid(mc["sharpes"][i])
         ]
 
-        # Filter out NaN and Inf values from frontier
+        # Filter NaN/Inf from frontier
         clean_frontier = [
             {
                 "risk":   ef["risks"][i],
@@ -281,29 +318,29 @@ async def optimization_chart(req: PortfolioRequest):
             and _is_valid(ef["returns"][i])
         ]
 
-        # Clean current portfolio values
+        # Sanitize current portfolio — always safe floats
         current = {
-            "risk":   float(analytics["summary"]["annual_volatility_pct"]),
-            "return": float(analytics["summary"]["annual_return_pct"]),
-            "sharpe": float(analytics["summary"]["sharpe_ratio"]),
+            "risk":   _safe_float(analytics["summary"]["annual_volatility_pct"]),
+            "return": _safe_float(analytics["summary"]["annual_return_pct"]),
+            "sharpe": _safe_float(analytics["summary"]["sharpe_ratio"]),
         }
 
-        # Clean min_variance and max_sharpe
+        # Sanitize min_variance and max_sharpe
         min_variance = {
-            "risk":   float(ef["min_variance"]["risk"]) if _is_valid(ef["min_variance"]["risk"]) else 0,
-            "return": float(ef["min_variance"]["return"]) if _is_valid(ef["min_variance"]["return"]) else 0,
+            "risk":   _safe_float(ef["min_variance"]["risk"]),
+            "return": _safe_float(ef["min_variance"]["return"]),
         }
         max_sharpe = {
-            "risk":   float(ef["max_sharpe"]["risk"]) if _is_valid(ef["max_sharpe"]["risk"]) else 0,
-            "return": float(ef["max_sharpe"]["return"]) if _is_valid(ef["max_sharpe"]["return"]) else 0,
+            "risk":   _safe_float(ef["max_sharpe"]["risk"]),
+            "return": _safe_float(ef["max_sharpe"]["return"]),
         }
 
         return {
-            "simulations":        clean_simulations,
-            "frontier":           clean_frontier,
-            "current_portfolio":  current,
-            "min_variance":       min_variance,
-            "max_sharpe":         max_sharpe,
+            "simulations":          clean_simulations,
+            "frontier":             clean_frontier,
+            "current_portfolio":    current,
+            "min_variance":         min_variance,
+            "max_sharpe":           max_sharpe,
             "best_sharpe_weights":  mc["best_sharpe"]["weights"],
             "min_variance_weights": min_var_weights,
         }
