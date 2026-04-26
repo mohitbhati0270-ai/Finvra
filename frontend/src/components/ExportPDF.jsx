@@ -74,10 +74,7 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
         return y + 12
       }
 
-      const rupee = (n) => {
-        // Use Rs. to avoid encoding issues
-        return `Rs.${parseInt(n).toLocaleString('en-IN')}`
-      }
+      const rupee = (n) => `Rs.${parseInt(n).toLocaleString('en-IN')}`
 
       const date = new Date().toLocaleDateString('en-IN', {
         day: 'numeric', month: 'long', year: 'numeric',
@@ -125,9 +122,9 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
           bg    : summary.annual_return_pct >= 0 ? C.greenBg : C.redBg,
           bdr   : summary.annual_return_pct >= 0 ? C.green : C.red,
         },
-        { label: 'Volatility',    value: `${summary.annual_volatility_pct}%`, color: C.orange, bg: C.orangeBg, bdr: C.orange },
-        { label: 'Sharpe Ratio',  value: summary.sharpe_ratio.toFixed(2),     color: C.blue,   bg: C.lightBlue, bdr: C.blueMid },
-        { label: 'Portfolio Beta',value: summary.portfolio_beta.toFixed(2),   color: C.purple, bg: C.purpleBg,  bdr: C.purple },
+        { label: 'Volatility',     value: `${summary.annual_volatility_pct}%`, color: C.orange, bg: C.orangeBg,  bdr: C.orange  },
+        { label: 'Sharpe Ratio',   value: summary.sharpe_ratio.toFixed(2),     color: C.blue,   bg: C.lightBlue, bdr: C.blueMid },
+        { label: 'Portfolio Beta', value: summary.portfolio_beta.toFixed(2),   color: C.purple, bg: C.purpleBg,  bdr: C.purple  },
       ]
 
       const cardW = (cw - 9) / 4
@@ -153,7 +150,7 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
 
       // ── HEALTH SCORE ──────────────────────────────────────────
       if (result.score) {
-        y = checkPage(y, 38)
+        y = checkPage(y, 42)
         y = sectionTitle(y, 'PORTFOLIO HEALTH SCORE')
 
         pdf.setFillColor(...C.lightBlue)
@@ -237,7 +234,6 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
       const cols = ['Stock', 'Weight', 'Return', 'Volatility', 'Beta', 'Risk Contrib']
       const colW = [34, 24, 26, 28, 20, 28]
 
-      // Draw header — always on same page as first row
       const drawTableHeader = (yy) => {
         pdf.setFillColor(...C.blueDark)
         pdf.roundedRect(margin, yy, cw, 8, 2, 2, 'F')
@@ -252,12 +248,10 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
       y = drawTableHeader(y)
 
       result.stocks.forEach((stock, idx) => {
-        // If row would overflow, start new page with header
         if (y > pageHeight - 22) {
           y = newPage()
           y = drawTableHeader(y)
         }
-
         pdf.setFillColor(...(idx % 2 === 0 ? C.offWhite : C.white))
         pdf.rect(margin, y, cw, 8, 'F')
         pdf.setDrawColor(...C.gray200)
@@ -290,51 +284,41 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
       y = checkPage(y, 75)
       y = sectionTitle(y, 'RETURN vs VOLATILITY')
 
-      const cX  = margin
-      const cY  = y
-      const cW  = cw
-      const cH  = 60
-      const pL  = 22, pB = 14, pT = 6, pR = 6
-      const pX  = cX + pL
-      const pY  = cY + pT
-      const pW  = cW - pL - pR
-      const pH  = cH - pB - pT
+      const cX = margin, cY = y, cW2 = cw, cH = 62
+      const pL = 22, pB = 14, pT = 6, pR = 8
+      const pX = cX + pL, pY = cY + pT
+      const pW = cW2 - pL - pR, pH = cH - pB - pT
 
       pdf.setFillColor(...C.offWhite)
-      pdf.roundedRect(cX, cY, cW, cH, 2, 2, 'F')
+      pdf.roundedRect(cX, cY, cW2, cH, 2, 2, 'F')
       pdf.setDrawColor(...C.gray200)
       pdf.setLineWidth(0.2)
-      pdf.roundedRect(cX, cY, cW, cH, 2, 2, 'S')
+      pdf.roundedRect(cX, cY, cW2, cH, 2, 2, 'S')
 
-      const risks   = result.stocks.map(s => parseFloat(s.annual_volatility))
-      const rets    = result.stocks.map(s => parseFloat(s.annual_return))
-      const minRisk = Math.min(...risks)   - 3
-      const maxRisk = Math.max(...risks)   + 3
-      const minRet  = Math.min(...rets)    - 4
-      const maxRet  = Math.max(...rets)    + 4
+      const risks  = result.stocks.map(s => parseFloat(s.annual_volatility))
+      const rets   = result.stocks.map(s => parseFloat(s.annual_return))
+      const minRsk = Math.min(...risks) - 3
+      const maxRsk = Math.max(...risks) + 3
+      const minRet = Math.min(...rets)  - 4
+      const maxRet = Math.max(...rets)  + 4
 
-      const toX = v => pX + ((v - minRisk) / (maxRisk - minRisk)) * pW
+      const toX = v => pX + ((v - minRsk) / (maxRsk - minRsk)) * pW
       const toY = v => pY + pH - ((v - minRet) / (maxRet - minRet)) * pH
 
       // Grid lines
-      pdf.setLineWidth(0.15)
       for (let g = 0; g <= 4; g++) {
-        const gy = pY + (g / 4) * pH
+        const gy  = pY + (g / 4) * pH
+        const gx  = pX + (g / 4) * pW
+        const vY  = maxRet - (g / 4) * (maxRet - minRet)
+        const vX  = minRsk + (g / 4) * (maxRsk - minRsk)
         pdf.setDrawColor(...C.gray200)
+        pdf.setLineWidth(0.15)
         pdf.line(pX, gy, pX + pW, gy)
-        const val = maxRet - (g / 4) * (maxRet - minRet)
-        pdf.setFontSize(5.5)
-        pdf.setTextColor(...C.gray400)
-        pdf.text(`${val.toFixed(0)}%`, cX + 1, gy + 1.5)
-      }
-      for (let g = 0; g <= 4; g++) {
-        const gx = pX + (g / 4) * pW
-        pdf.setDrawColor(...C.gray200)
         pdf.line(gx, pY, gx, pY + pH)
-        const val = minRisk + (g / 4) * (maxRisk - minRisk)
         pdf.setFontSize(5.5)
         pdf.setTextColor(...C.gray400)
-        pdf.text(`${val.toFixed(0)}%`, gx - 3, cY + cH - 2)
+        pdf.text(`${vY.toFixed(0)}%`, cX + 1, gy + 1.5)
+        pdf.text(`${vX.toFixed(0)}%`, gx - 3, cY + cH - 2)
       }
 
       // Zero line
@@ -364,31 +348,27 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
         pdf.setFontSize(6)
         pdf.setFont('helvetica', 'bold')
         pdf.setTextColor(...col)
-        const label = stock.ticker.replace('.NS', '')
-        // Offset label to avoid overlap
-        const lx = dx + 3.5
-        const ly = dy - 1
-        pdf.text(label, lx, ly)
+        pdf.text(stock.ticker.replace('.NS', ''), dx + 3.5, dy - 1)
       })
       y += cH + 10
 
       // ── PORTFOLIO ALLOCATION ──────────────────────────────────
-      y = checkPage(y, 65)
+      y = checkPage(y, 70)
       y = sectionTitle(y, 'PORTFOLIO ALLOCATION')
 
       const alloc  = result.stocks
       const pieX   = margin + 28
-      const pieY   = y + 28
-      const pieR   = 24
+      const pieY   = y + 30
+      const pieR   = 26
       let startAng = -Math.PI / 2
 
       alloc.forEach((stock, i) => {
-        const slice    = (stock.weight / 100) * 2 * Math.PI
-        const steps    = Math.max(4, Math.round(slice * 24))
-        const col      = dotColors[i % dotColors.length]
+        const slice = (stock.weight / 100) * 2 * Math.PI
+        const steps = Math.max(4, Math.round(slice * 28))
+        const col   = dotColors[i % dotColors.length]
         pdf.setFillColor(...col)
         pdf.setDrawColor(...C.white)
-        pdf.setLineWidth(0.4)
+        pdf.setLineWidth(0.5)
         for (let s = 0; s < steps; s++) {
           const a1 = startAng + (s / steps) * slice
           const a2 = startAng + ((s + 1) / steps) * slice
@@ -404,31 +384,32 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
 
       // White donut center
       pdf.setFillColor(...C.white)
-      pdf.circle(pieX, pieY, pieR * 0.48, 'F')
+      pdf.circle(pieX, pieY, pieR * 0.45, 'F')
       pdf.setFontSize(6.5)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(...C.blueDark)
       pdf.text('Alloc', pieX, pieY + 2, { align: 'center' })
 
       // Legend — 2 columns
-      const legX1 = margin + 62
-      const legX2 = legX1 + 62
+      const legX1 = margin + 65
+      const legX2 = legX1 + 68
+      const half  = Math.ceil(alloc.length / 2)
       alloc.forEach((stock, i) => {
-        const col   = dotColors[i % dotColors.length]
-        const legX  = i < Math.ceil(alloc.length / 2) ? legX1 : legX2
-        const legY  = y + (i < Math.ceil(alloc.length / 2) ? i : i - Math.ceil(alloc.length / 2)) * 10
+        const col  = dotColors[i % dotColors.length]
+        const legX = i < half ? legX1 : legX2
+        const legY = y + (i < half ? i : i - half) * 11
         pdf.setFillColor(...col)
-        pdf.roundedRect(legX, legY + 1.5, 7, 5, 1, 1, 'F')
+        pdf.roundedRect(legX, legY + 2, 7, 5.5, 1, 1, 'F')
         pdf.setFontSize(7.5)
         pdf.setFont('helvetica', 'bold')
         pdf.setTextColor(...C.blueDark)
-        pdf.text(stock.ticker.replace('.NS', ''), legX + 10, legY + 5.5)
+        pdf.text(stock.ticker.replace('.NS', ''), legX + 10, legY + 6.5)
         pdf.setFont('helvetica', 'normal')
         pdf.setTextColor(...C.gray700)
-        pdf.text(`${stock.weight}%`, legX + 48, legY + 5.5)
+        pdf.text(`${stock.weight}%`, legX + 50, legY + 6.5)
       })
 
-      y += Math.max(58, Math.ceil(alloc.length / 2) * 10 + 14)
+      y += Math.max(64, half * 11 + 16)
 
       // ── RISK CONTRIBUTION ─────────────────────────────────────
       y = checkPage(y, 40)
@@ -443,24 +424,22 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
         pdf.setFontSize(7.5)
         pdf.setFont('helvetica', 'bold')
         pdf.setTextColor(...C.blueDark)
-        pdf.text(stock.ticker.replace('.NS', ''), margin, y + 5)
-
+        pdf.text(stock.ticker.replace('.NS', ''), margin, y + 5.5)
         pdf.setFillColor(...C.gray100)
-        pdf.roundedRect(margin + 32, y + 1, barMaxW, 5.5, 1, 1, 'F')
+        pdf.roundedRect(margin + 32, y + 1, barMaxW, 6, 1, 1, 'F')
         pdf.setFillColor(...col)
-        pdf.roundedRect(margin + 32, y + 1, Math.max(1, barW), 5.5, 1, 1, 'F')
-
+        pdf.roundedRect(margin + 32, y + 1, Math.max(1, barW), 6, 1, 1, 'F')
         pdf.setFontSize(7.5)
         pdf.setFont('helvetica', 'normal')
         pdf.setTextColor(...C.gray700)
-        pdf.text(`${stock.risk_contribution_pct.toFixed(1)}%`, margin + cw - 22, y + 5.5)
+        pdf.text(`${stock.risk_contribution_pct.toFixed(1)}%`, margin + cw - 20, y + 5.5)
         y += 10
       })
-      y += 6
+      y += 8
 
       // ── BENCHMARK COMPARISON ──────────────────────────────────
       if (benchData) {
-        y = checkPage(y, 35)
+        y = checkPage(y, 38)
         y = sectionTitle(y, 'BENCHMARK COMPARISON vs NIFTY 50')
 
         const portLast  = benchData.portfolio[benchData.portfolio.length - 1]
@@ -500,12 +479,14 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
         y = checkPage(y, 70)
         y = sectionTitle(y, 'OPTIMAL PORTFOLIO WEIGHTS')
 
+        const badgeW = (cw - 14) / 3 - 3
+
         // ── Max Sharpe ──
         const sharpeWeights = Object.entries(optData.best_sharpe_weights || {})
         const sharpeRows    = Math.ceil(sharpeWeights.length / 3)
-        const sharpeBoxH    = 22 + sharpeRows * 10
+        const sharpeBoxH    = 24 + sharpeRows * 11
 
-        y = checkPage(y, sharpeBoxH + 6)
+        y = checkPage(y, sharpeBoxH + 8)
         pdf.setFillColor(...C.amberBg)
         pdf.roundedRect(margin, y, cw, sharpeBoxH, 3, 3, 'F')
         pdf.setDrawColor(...C.amber)
@@ -526,35 +507,32 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
           margin + 7, y + 15
         )
 
-        // Weight badges in rows of 3
-        const badgeW = (cw - 14) / 3 - 3
         sharpeWeights.forEach(([ticker, weight], i) => {
-          const col  = i % 3
-          const row  = Math.floor(i / 3)
-          const bx   = margin + 7 + col * (badgeW + 3)
-          const by   = y + 20 + row * 10
-
+          const col = i % 3
+          const row = Math.floor(i / 3)
+          const bx  = margin + 7 + col * (badgeW + 3)
+          const by  = y + 19 + row * 11
           pdf.setFillColor(...C.white)
-          pdf.roundedRect(bx, by, badgeW, 7, 1.5, 1.5, 'F')
+          pdf.roundedRect(bx, by, badgeW, 8, 1.5, 1.5, 'F')
           pdf.setDrawColor(...C.amber)
           pdf.setLineWidth(0.3)
-          pdf.roundedRect(bx, by, badgeW, 7, 1.5, 1.5, 'S')
+          pdf.roundedRect(bx, by, badgeW, 8, 1.5, 1.5, 'S')
           pdf.setFontSize(7.5)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.amber)
           pdf.text(
-            `${ticker.replace('.NS','')}: ${weight}%`,
-            bx + badgeW / 2, by + 5, { align: 'center' }
+            `${ticker.replace('.NS', '')}: ${weight}%`,
+            bx + badgeW / 2, by + 5.5, { align: 'center' }
           )
         })
-        y += sharpeBoxH + 6
+        y += sharpeBoxH + 8
 
         // ── Min Variance ──
         const minVarWeights = Object.entries(optData.min_variance_weights || {})
         const minRows       = Math.ceil(minVarWeights.length / 3)
-        const minBoxH       = 22 + minRows * 10
+        const minBoxH       = 24 + minRows * 11
 
-        y = checkPage(y, minBoxH + 6)
+        y = checkPage(y, minBoxH + 8)
         pdf.setFillColor(...C.tealBg)
         pdf.roundedRect(margin, y, cw, minBoxH, 3, 3, 'F')
         pdf.setDrawColor(...C.teal)
@@ -576,30 +554,29 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
         )
 
         minVarWeights.forEach(([ticker, weight], i) => {
-          const col  = i % 3
-          const row  = Math.floor(i / 3)
-          const bx   = margin + 7 + col * (badgeW + 3)
-          const by   = y + 20 + row * 10
-
+          const col = i % 3
+          const row = Math.floor(i / 3)
+          const bx  = margin + 7 + col * (badgeW + 3)
+          const by  = y + 19 + row * 11
           pdf.setFillColor(...C.white)
-          pdf.roundedRect(bx, by, badgeW, 7, 1.5, 1.5, 'F')
+          pdf.roundedRect(bx, by, badgeW, 8, 1.5, 1.5, 'F')
           pdf.setDrawColor(...C.teal)
           pdf.setLineWidth(0.3)
-          pdf.roundedRect(bx, by, badgeW, 7, 1.5, 1.5, 'S')
+          pdf.roundedRect(bx, by, badgeW, 8, 1.5, 1.5, 'S')
           pdf.setFontSize(7.5)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.teal)
           pdf.text(
-            `${ticker.replace('.NS','')}: ${weight}%`,
-            bx + badgeW / 2, by + 5, { align: 'center' }
+            `${ticker.replace('.NS', '')}: ${weight}%`,
+            bx + badgeW / 2, by + 5.5, { align: 'center' }
           )
         })
-        y += minBoxH + 6
+        y += minBoxH + 8
       }
 
       // ── VALUE AT RISK ─────────────────────────────────────────
       if (varData) {
-        y = checkPage(y, 75)
+        y = checkPage(y, 80)
         y = sectionTitle(y, 'VALUE AT RISK  (CVaR & Modified VaR)')
 
         pdf.setFontSize(7)
@@ -613,23 +590,24 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
 
         const levels = ['90', '95', '99']
         const varW   = (cw - 6) / 3
+        const cardH  = 60
 
         levels.forEach((level, i) => {
           if (!varData[level]) return
-          const x  = margin + i * (varW + 3)
-          const vd = varData[level]
+          const x   = margin + i * (varW + 3)
+          const vd  = varData[level]
           const ref = 100000
 
           // Card
           pdf.setFillColor(...C.redBg)
-          pdf.roundedRect(x, y, varW, 48, 3, 3, 'F')
+          pdf.roundedRect(x, y, varW, cardH, 3, 3, 'F')
           pdf.setDrawColor(...C.red)
           pdf.setLineWidth(0.3)
-          pdf.roundedRect(x, y, varW, 48, 3, 3, 'S')
+          pdf.roundedRect(x, y, varW, cardH, 3, 3, 'S')
           pdf.setFillColor(...C.red)
           pdf.rect(x, y, varW, 2.5, 'F')
 
-          // Confidence level header
+          // Confidence header
           pdf.setFontSize(8.5)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.red)
@@ -639,56 +617,41 @@ export default function ExportPDF({ result, benchData, varData, optData }) {
           pdf.setLineWidth(0.2)
           pdf.line(x + 4, y + 13, x + varW - 4, y + 13)
 
-          // CVaR row
+          // CVaR
           pdf.setFontSize(7)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.gray700)
           pdf.text('CVaR (Expected Shortfall)', x + 4, y + 20)
-
-          pdf.setFontSize(10)
+          pdf.setFontSize(11)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.red)
           pdf.text(`${vd.cvar}%`, x + 4, y + 27)
-
           pdf.setFontSize(7.5)
           pdf.setFont('helvetica', 'normal')
           pdf.setTextColor(...C.gray700)
           pdf.text(rupee((vd.cvar / 100) * ref) + ' per Rs.1L', x + 4, y + 33)
 
+          // Divider
           pdf.setDrawColor(...C.gray200)
           pdf.setLineWidth(0.15)
           pdf.line(x + 4, y + 36, x + varW - 4, y + 36)
 
-          // Modified VaR row
+          // Modified VaR
           pdf.setFontSize(7)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.gray700)
-          pdf.text('Modified VaR', x + 4, y + 41)
-
-          pdf.setFontSize(10)
+          pdf.text('Modified VaR', x + 4, y + 43)
+          pdf.setFontSize(11)
           pdf.setFont('helvetica', 'bold')
           pdf.setTextColor(...C.purple)
-          pdf.text(`${vd.modified_var}%`, x + 4, y + 47)
-
+          pdf.text(`${vd.modified_var}%`, x + 4, y + 50)
           pdf.setFontSize(7.5)
           pdf.setFont('helvetica', 'normal')
           pdf.setTextColor(...C.gray700)
-          // note: card height is 48, so this fits just outside — extend card
+          pdf.text(rupee((vd.modified_var / 100) * ref) + ' per Rs.1L', x + 4, y + 57)
         })
 
-        // Second pass for Modified VaR amounts (below the card)
-        levels.forEach((level, i) => {
-          if (!varData[level]) return
-          const x  = margin + i * (varW + 3)
-          const vd = varData[level]
-          const ref = 100000
-          pdf.setFontSize(7.5)
-          pdf.setFont('helvetica', 'normal')
-          pdf.setTextColor(...C.gray700)
-          pdf.text(rupee((vd.modified_var / 100) * ref) + ' per Rs.1L', x + 4, y + 53)
-        })
-
-        y += 60
+        y += cardH + 10
       }
 
       // ── FOOTER ON ALL PAGES ───────────────────────────────────
