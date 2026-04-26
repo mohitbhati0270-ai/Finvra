@@ -49,7 +49,6 @@ function AnalysePage() {
   const [optData, setOptData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [isWakingUp, setIsWakingUp] = useState(false)
 
   const holdingCalcs = useMemo(() => {
     const withAmounts = holdings.map(h => ({ ...h, amount: h.qty * h.avgPrice }))
@@ -71,9 +70,7 @@ function AnalysePage() {
 
   const handleAnalyze = async () => {
     setLoading(true)
-    setIsWakingUp(true)
     setError(null)
-    setTimeout(() => setIsWakingUp(false), 5000)
     try {
       let tickers, weightDecimals
       if (mode === 'real') {
@@ -81,7 +78,6 @@ function AnalysePage() {
         if (validHoldings.length < 2) {
           setError('Please add at least 2 stocks with quantity and price to analyze.')
           setLoading(false)
-          setIsWakingUp(false)
           return
         }
         tickers = validHoldings.map(h => h.ticker)
@@ -93,7 +89,6 @@ function AnalysePage() {
         if (validQuick.length < 2) {
           setError('Please add at least 2 stocks with weights to analyze.')
           setLoading(false)
-          setIsWakingUp(false)
           return
         }
         tickers = validQuick.map(x => x.ticker)
@@ -117,7 +112,6 @@ function AnalysePage() {
       setError(detail || 'Something went wrong. Please check your stock tickers and try again.')
     } finally {
       setLoading(false)
-      setIsWakingUp(false)
     }
   }
 
@@ -370,12 +364,7 @@ function AnalysePage() {
             boxShadow: loading || !isReady ? 'none' : '0 8px 24px rgba(201,168,76,0.4)',
             transition: 'all 0.2s', letterSpacing: '0.3px',
           }}>
-            {loading
-              ? isWakingUp
-                ? '⏳ Waking up server... please wait 30-60 seconds on first load'
-                : '🔄 Analyzing your portfolio...'
-              : '✦ Analyse Portfolio'
-            }
+            {loading ? 'Analyzing your portfolio...' : '✦ Analyse Portfolio'}
           </button>
 
           {error && (
