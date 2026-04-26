@@ -11,7 +11,6 @@ export default function StockSearch({ value, onChange, placeholder }) {
   const inputRef = useRef(null)
   const wrapperRef = useRef(null)
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -22,7 +21,6 @@ export default function StockSearch({ value, onChange, placeholder }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Recalculate position on scroll or resize
   useEffect(() => {
     const updatePos = () => {
       if (showDropdown && inputRef.current) {
@@ -96,7 +94,17 @@ export default function StockSearch({ value, onChange, placeholder }) {
     <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
       <input
         ref={inputRef}
-        className="border border-gray-200 rounded-lg px-3 py-2 w-44 text-sm font-medium focus:outline-none focus:border-blue-400"
+        style={{
+          border:       '1.5px solid rgba(201,168,76,0.3)',
+          borderRadius: '10px',
+          padding:      '8px 12px',
+          width:        '176px',
+          fontSize:     '13px',
+          fontWeight:   '500',
+          outline:      'none',
+          background:   '#0B1120',
+          color:        '#FFFFFF',
+        }}
         value={query}
         onChange={handleInput}
         onFocus={() => {
@@ -111,12 +119,12 @@ export default function StockSearch({ value, onChange, placeholder }) {
 
       {loading && (
         <div style={{
-          position: 'absolute',
-          top: '50%',
-          right: '10px',
+          position:  'absolute',
+          top:       '50%',
+          right:     '10px',
           transform: 'translateY(-50%)',
-          fontSize: '10px',
-          color: 'var(--color-text-tertiary)',
+          fontSize:  '10px',
+          color:     'rgba(255,255,255,0.4)',
         }}>
           ...
         </div>
@@ -130,10 +138,10 @@ export default function StockSearch({ value, onChange, placeholder }) {
             left:         `${dropdownPos.left}px`,
             width:        `${dropdownPos.width}px`,
             zIndex:       99999,
-            background:   'white',
-            border:       '1px solid #E2E8F0',
+            background:   '#0F172A',
+            border:       '1px solid rgba(201,168,76,0.2)',
             borderRadius: '10px',
-            boxShadow:    '0 8px 24px rgba(0,0,0,0.15)',
+            boxShadow:    '0 8px 24px rgba(0,0,0,0.4)',
             overflow:     'hidden',
             maxHeight:    '320px',
             overflowY:    'auto',
@@ -146,35 +154,35 @@ export default function StockSearch({ value, onChange, placeholder }) {
               style={{
                 padding:        '10px 14px',
                 cursor:         'pointer',
-                borderBottom:   i < results.length - 1 ? '1px solid #F1F5F9' : 'none',
+                borderBottom:   i < results.length - 1 ? '1px solid rgba(201,168,76,0.08)' : 'none',
                 display:        'flex',
                 justifyContent: 'space-between',
                 alignItems:     'center',
-                background:     'white',
+                background:     'transparent',
                 transition:     'background 0.1s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-              onMouseLeave={e => e.currentTarget.style.background = 'white'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <span style={{
                   fontSize:   '13px',
                   fontWeight: '600',
-                  color:      '#1E293B',
+                  color:      '#FFFFFF',
                 }}>
                   {stock.ticker}
                 </span>
                 <span style={{
                   fontSize: '11px',
-                  color:    '#64748B',
+                  color:    'rgba(255,255,255,0.4)',
                 }}>
                   {stock.name}
                 </span>
               </div>
               <span style={{
                 fontSize:     '10px',
-                color:        '#3B82F6',
-                background:   '#EFF6FF',
+                color:        '#C9A84C',
+                background:   'rgba(201,168,76,0.1)',
                 padding:      '2px 7px',
                 borderRadius: '4px',
                 fontWeight:   '500',
