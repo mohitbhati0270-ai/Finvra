@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
 from models.schemas import PortfolioRequest
-from services.data_service import fetch_prices, get_returns, fetch_benchmark
+from services.data_service import fetch_prices, get_returns, fetch_benchmark, get_last_skipped
 from services.analytics_service import (
     compute_portfolio_analytics,
     run_monte_carlo,
@@ -17,7 +17,6 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 
 def _deduplicate_tickers(tickers, weights):
-    """Remove duplicate tickers, merging their weights."""
     seen = {}
     for t, w in zip(tickers, weights):
         t_clean = t.strip().upper()
@@ -79,7 +78,6 @@ def _get_scaling(n_stocks):
 
 
 def _is_valid(val):
-    """Check if a float value is valid (not nan or inf)"""
     try:
         return val == val and abs(val) != float('inf')
     except Exception:
@@ -87,7 +85,6 @@ def _is_valid(val):
 
 
 def _safe_float(val, default=0.0):
-    """Convert to float safely, returning default if nan/inf."""
     try:
         f = float(val)
         if f != f or abs(f) == float('inf'):
@@ -109,6 +106,8 @@ def _handle_error(e):
             status_code=400,
             detail="Could not fetch price data for one or more stocks. Please check the ticker symbol."
         )
+    if "Not enough valid stocks" in error_msg or "Insufficient data" in error_msg:
+        raise HTTPException(status_code=400, detail=error_msg)
     raise HTTPException(status_code=500, detail=f"Server error: {error_msg}")
 
 
@@ -148,6 +147,10 @@ async def analyze_portfolio(req: PortfolioRequest):
             )
         except Exception:
             result["score"] = None
+
+        # Add skipped stocks warning
+        skipped = get_last_skipped()
+        result["skipped_stocks"] = skipped
 
         return result
     except HTTPException:
@@ -294,7 +297,6 @@ async def optimization_chart(req: PortfolioRequest):
 
         min_var_weights = _get_min_variance_weights(returns)
 
-        # Filter NaN/Inf from simulations
         clean_simulations = [
             {
                 "risk":   mc["risks"][i],
@@ -307,7 +309,6 @@ async def optimization_chart(req: PortfolioRequest):
             and _is_valid(mc["sharpes"][i])
         ]
 
-        # Filter NaN/Inf from frontier
         clean_frontier = [
             {
                 "risk":   ef["risks"][i],
@@ -318,14 +319,12 @@ async def optimization_chart(req: PortfolioRequest):
             and _is_valid(ef["returns"][i])
         ]
 
-        # Sanitize current portfolio — always safe floats
         current = {
             "risk":   _safe_float(analytics["summary"]["annual_volatility_pct"]),
             "return": _safe_float(analytics["summary"]["annual_return_pct"]),
             "sharpe": _safe_float(analytics["summary"]["sharpe_ratio"]),
         }
 
-        # Sanitize min_variance and max_sharpe
         min_variance = {
             "risk":   _safe_float(ef["min_variance"]["risk"]),
             "return": _safe_float(ef["min_variance"]["return"]),

@@ -33,22 +33,23 @@ const formatINR = (value) =>
   }).format(value)
 
 function AnalysePage() {
-  const [mode, setMode] = useState('real')
-  const [holdings, setHoldings] = useState([
+  const [mode, setMode]               = useState('real')
+  const [holdings, setHoldings]       = useState([
     { ticker: '', qty: 0, avgPrice: 0 },
     { ticker: '', qty: 0, avgPrice: 0 },
     { ticker: '', qty: 0, avgPrice: 0 },
   ])
   const [quickTickers, setQuickTickers] = useState(['', '', ''])
   const [quickWeights, setQuickWeights] = useState([0, 0, 0])
-  const [period, setPeriod] = useState('2y')
-  const [result, setResult] = useState(null)
-  const [varData, setVarData] = useState(null)
-  const [returnsData, setReturnsData] = useState(null)
-  const [benchData, setBenchData] = useState(null)
-  const [optData, setOptData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [period, setPeriod]             = useState('2y')
+  const [result, setResult]             = useState(null)
+  const [varData, setVarData]           = useState(null)
+  const [returnsData, setReturnsData]   = useState(null)
+  const [benchData, setBenchData]       = useState(null)
+  const [optData, setOptData]           = useState(null)
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState(null)
+  const [skippedStocks, setSkippedStocks] = useState([])
 
   const holdingCalcs = useMemo(() => {
     const withAmounts = holdings.map(h => ({ ...h, amount: h.qty * h.avgPrice }))
@@ -66,11 +67,13 @@ function AnalysePage() {
     setHoldings(importedHoldings)
     setResult(null)
     setError(null)
+    setSkippedStocks([])
   }
 
   const handleAnalyze = async () => {
     setLoading(true)
     setError(null)
+    setSkippedStocks([])
     try {
       let tickers, weightDecimals
       if (mode === 'real') {
@@ -80,7 +83,7 @@ function AnalysePage() {
           setLoading(false)
           return
         }
-        tickers = validHoldings.map(h => h.ticker)
+        tickers       = validHoldings.map(h => h.ticker)
         weightDecimals = validHoldings.map(h => h.weight / 100)
       } else {
         const validQuick = quickTickers
@@ -95,6 +98,7 @@ function AnalysePage() {
         const total = validQuick.reduce((s, x) => s + x.weight, 0)
         weightDecimals = validQuick.map(x => x.weight / total)
       }
+
       const [analytics, var_, rd, bench, opt] = await Promise.all([
         analyzePortfolio(tickers, weightDecimals, period),
         getVaR(tickers, weightDecimals, period),
@@ -102,7 +106,9 @@ function AnalysePage() {
         getBenchmarkComparison(tickers, weightDecimals, period),
         getOptimizationChart(tickers, weightDecimals, period),
       ])
+
       setResult(analytics)
+      setSkippedStocks(analytics.skipped_stocks || [])
       setVarData(var_)
       setReturnsData(rd.returns)
       setBenchData(bench)
@@ -364,8 +370,32 @@ function AnalysePage() {
             boxShadow: loading || !isReady ? 'none' : '0 8px 24px rgba(201,168,76,0.4)',
             transition: 'all 0.2s', letterSpacing: '0.3px',
           }}>
-            {loading ? 'Analyzing your portfolio...' : '✦ Analyse Portfolio'}
+            {loading ? '🔄 Analyzing your portfolio...' : '✦ Analyse Portfolio'}
           </button>
+
+          {/* Skipped stocks warning */}
+          {skippedStocks.length > 0 && (
+            <div style={{
+              marginTop:    '12px',
+              padding:      '14px 16px',
+              background:   'rgba(245,158,11,0.08)',
+              border:       '1px solid rgba(245,158,11,0.3)',
+              borderRadius: '10px',
+              fontSize:     '13px',
+            }}>
+              <div style={{ fontWeight: '700', color: '#F59E0B', marginBottom: '8px' }}>
+                ⚠️ {skippedStocks.length} stock{skippedStocks.length > 1 ? 's were' : ' was'} excluded from analysis:
+              </div>
+              {skippedStocks.map((s, i) => (
+                <div key={i} style={{ color: '#94A3B8', fontSize: '12px', marginTop: '4px' }}>
+                  • <strong style={{ color: '#FCD34D' }}>{s.ticker}</strong> — {s.reason}
+                </div>
+              ))}
+              <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
+                💡 The analysis above is based on the remaining valid stocks only.
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{
