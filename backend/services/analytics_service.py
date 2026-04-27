@@ -22,6 +22,8 @@ def compute_portfolio_analytics(
 
     # Drop columns that are all NaN
     returns = returns.dropna(axis=1, how='all')
+    returns = returns.dropna(axis=1, thresh=int(len(returns) * 0.7))
+    returns = returns.ffill().bfill()
     returns = returns.dropna(axis=0, how='any')
 
     if returns.empty or len(returns.columns) < 2:
@@ -109,7 +111,7 @@ def run_monte_carlo(
     returns: pd.DataFrame,
     n_simulations: int = 5000
 ) -> dict:
-    returns      = returns.dropna(axis=1, how='all').dropna(axis=0, how='any')
+    returns      = returns.dropna(axis=1, how='all').dropna(axis=1, thresh=int(len(returns)*0.7)).ffill().bfill().dropna(axis=0, how='any')
     mean_returns = returns.mean() * 252
     cov_matrix   = returns.cov() * 252
     n            = len(mean_returns)
@@ -154,7 +156,7 @@ def compute_var_metrics(
     from scipy.stats import norm, skew, kurtosis
 
     # Clean data first
-    returns = returns.dropna(axis=1, how='all').dropna(axis=0, how='any')
+    returns = returns.dropna(axis=1, how='all').dropna(axis=1, thresh=int(len(returns)*0.7)).ffill().bfill()
 
     if returns.empty:
         raise ValueError("Insufficient data to compute VaR metrics.")
@@ -215,7 +217,7 @@ def compute_efficient_frontier(
     returns: pd.DataFrame,
     n_points: int = 60
 ) -> dict:
-    returns      = returns.dropna(axis=1, how='all').dropna(axis=0, how='any')
+    returns      = returns.dropna(axis=1, how='all').dropna(axis=1, thresh=int(len(returns)*0.7)).ffill().bfill().dropna(axis=0, how='any')
     mean_returns = returns.mean() * 252
     cov_matrix   = returns.cov() * 252
     n            = len(mean_returns)
