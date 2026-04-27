@@ -1,20 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 import { searchStocks } from '../api/portfolioApi'
-import { useState, useRef, useEffect } from 'react'
 
 export default function StockSearch({ value, onChange, placeholder }) {
-  const [query, setQuery] = useState(value || '')
-
-useEffect(() => {
-  setQuery(value || '')
-}, [value])
-  const [results, setResults] = useState([])
+  const [query, setQuery]               = useState(value || '')
+  const [results, setResults]           = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
+  const [loading, setLoading]           = useState(false)
+  const [dropdownPos, setDropdownPos]   = useState({ top: 0, left: 0, width: 0 })
   const debounceRef = useRef(null)
-  const inputRef = useRef(null)
-  const wrapperRef = useRef(null)
+  const inputRef    = useRef(null)
+  const wrapperRef  = useRef(null)
+
+  // Sync query when parent changes value (e.g. Excel import)
+  useEffect(() => {
+    setQuery(value || '')
+  }, [value])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -136,22 +136,20 @@ useEffect(() => {
       )}
 
       {showDropdown && results.length > 0 && (
-        <div
-          style={{
-            position:     'fixed',
-            top:          `${dropdownPos.top}px`,
-            left:         `${dropdownPos.left}px`,
-            width:        `${dropdownPos.width}px`,
-            zIndex:       99999,
-            background:   '#0F172A',
-            border:       '1px solid rgba(201,168,76,0.2)',
-            borderRadius: '10px',
-            boxShadow:    '0 8px 24px rgba(0,0,0,0.4)',
-            overflow:     'hidden',
-            maxHeight:    '320px',
-            overflowY:    'auto',
-          }}
-        >
+        <div style={{
+          position:     'fixed',
+          top:          `${dropdownPos.top}px`,
+          left:         `${dropdownPos.left}px`,
+          width:        `${dropdownPos.width}px`,
+          zIndex:       99999,
+          background:   '#0F172A',
+          border:       '1px solid rgba(201,168,76,0.2)',
+          borderRadius: '10px',
+          boxShadow:    '0 8px 24px rgba(0,0,0,0.4)',
+          overflow:     'hidden',
+          maxHeight:    '320px',
+          overflowY:    'auto',
+        }}>
           {results.map((stock, i) => (
             <div
               key={i}
@@ -170,17 +168,10 @@ useEffect(() => {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{
-                  fontSize:   '13px',
-                  fontWeight: '600',
-                  color:      '#FFFFFF',
-                }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#FFFFFF' }}>
                   {stock.ticker}
                 </span>
-                <span style={{
-                  fontSize: '11px',
-                  color:    'rgba(255,255,255,0.4)',
-                }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
                   {stock.name}
                 </span>
               </div>
