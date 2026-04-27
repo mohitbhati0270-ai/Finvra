@@ -1,15 +1,48 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import time
 from config import settings
 
 _price_cache: dict = {}
-
-# Global to track skipped tickers for current request
 _last_skipped: list = []
 
 def get_last_skipped() -> list:
     return _last_skipped.copy()
+
+def _fetch_single(ticker: str, period: str, retries: int = 3) -> pd.Series | None:
+    """Fetch a single ticker with retries on rate limit."""
+    for attempt in range(retries):
+        try:
+            raw = yf.download(
+                ticker, period=period,
+                auto_adjust=True, progress=False
+            )["Close"]
+
+            if raw is None or raw.empty:
+                return None
+
+            series = raw.squeeze()
+            real_count = series.dropna().shape[0]
+            if real_count < 60:
+                return None
+
+            return series
+
+        except Exception as e:
+            err = str(e).lower()
+            if "rate limit" in err or "too many requests" in err or "429" in err:
+                wait = (attempt + 1) * 3
+                print(f"Rate limited on {ticker}, waiting {wait}s (attempt {attempt+1}/{retries})")
+                time.sleep(wait)
+                continue
+            else:
+                print(f"Error fetching {ticker}: {e}")
+                return None
+
+    print(f"Failed after {retries} retries: {ticker}")
+    return None
+
 
 def fetch_prices(tickers: list[str], period: str = "2y") -> pd.DataFrame:
     global _last_skipped
@@ -26,34 +59,33 @@ def fetch_prices(tickers: list[str], period: str = "2y") -> pd.DataFrame:
     valid_frames = {}
     skipped_info = {}
 
-    for ticker in tickers:
-        try:
-            raw = yf.download(
-                ticker, period=period,
-                auto_adjust=True, progress=False
-            )["Close"]
+    for i, ticker in enumerate(tickers):
+        # Small delay between requests to avoid rate limiting
+        if i > 0 and i % 5 == 0:
+            time.sleep(1)
 
-            if raw is None or raw.empty:
-                skipped_info[ticker.replace('.NS','')] = "No data found on NSE. Please verify the ticker symbol."
-                continue
+        series = _fetch_single(ticker, period)
 
-            series = raw.squeeze()
-            real_data_count = series.dropna().shape[0]
-
-            if real_data_count < 60:
-                skipped_info[ticker.replace('.NS','')] = f"Only {real_data_count} days of data available. Minimum 60 days required."
-                continue
-
-            valid_frames[ticker] = series
-
-        except Exception as e:
-            skipped_info[ticker.replace('.NS','')] = f"Failed to fetch: {str(e)}"
+        if series is None:
+            clean = ticker.replace('.NS', '')
+            # Try to determine the reason
+            try:
+                test = yf.download(ticker, period='1mo', auto_adjust=True, progress=False)["Close"]
+                if test.empty:
+                    skipped_info[clean] = "Not found on NSE. Please verify the ticker symbol."
+                else:
+                    skipped_info[clean] = f"Insufficient historical data for the selected period. Try a shorter period like 1y."
+            except Exception as e:
+                err = str(e).lower()
+                if "rate limit" in err or "too many requests" in err:
+                    skipped_info[clean] = "Could not fetch data due to rate limiting. Try again in a moment."
+                else:
+                    skipped_info[clean] = "Could not fetch data. Please verify the ticker symbol."
             continue
 
-    _last_skipped = [
-        {"ticker": t, "reason": r}
-        for t, r in skipped_info.items()
-    ]
+        valid_frames[ticker] = series
+
+    _last_skipped = [{"ticker": t, "reason": r} for t, r in skipped_info.items()]
 
     if skipped_info:
         print(f"Skipped: {skipped_info}")
@@ -61,8 +93,9 @@ def fetch_prices(tickers: list[str], period: str = "2y") -> pd.DataFrame:
     if len(valid_frames) < 2:
         skipped_list = ', '.join(skipped_info.keys())
         raise ValueError(
-            f"Not enough valid stocks. These could not be fetched: {skipped_list}. "
-            f"Please check the ticker symbols or try a shorter period."
+            f"Not enough valid stocks to analyse. "
+            f"Could not fetch data for: {skipped_list}. "
+            f"Please check the ticker symbols or try again in a moment."
         )
 
     data = pd.DataFrame(valid_frames)
