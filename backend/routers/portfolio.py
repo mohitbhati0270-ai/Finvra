@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
 from models.schemas import PortfolioRequest
-from services.data_service import fetch_prices, get_returns, fetch_benchmark, get_last_skipped
+from services.data_service import fetch_prices, get_returns, fetch_benchmark, get_skipped_for_tickers
 from services.analytics_service import (
     compute_portfolio_analytics,
     run_monte_carlo,
@@ -149,7 +149,7 @@ async def analyze_portfolio(req: PortfolioRequest):
             result["score"] = None
 
         # Add skipped stocks warning
-        skipped = get_last_skipped()
+        skipped = get_skipped_for_tickers(tickers, req.period)
         result["skipped_stocks"] = skipped
 
         return result
