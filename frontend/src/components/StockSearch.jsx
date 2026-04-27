@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { searchStocks } from '../api/portfolioApi'
+import { useState, useRef, useEffect } from 'react'
 
 export default function StockSearch({ value, onChange, placeholder }) {
   const [query, setQuery] = useState(value || '')
+
+useEffect(() => {
+  setQuery(value || '')
+}, [value])
   const [results, setResults] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [loading, setLoading] = useState(false)
