@@ -390,12 +390,12 @@ def compute_portfolio_score(
 
     top_risk = max(s["risk_contribution_pct"] for s in stocks)
     n_stocks = len(stocks)
-    if top_risk <= 20 and n_stocks >= 5:   d_score = 20
-    elif top_risk <= 25 and n_stocks >= 4: d_score = 16
-    elif top_risk <= 30:                   d_score = 12
-    elif top_risk <= 40:                   d_score = 8
-    elif top_risk <= 50:                   d_score = 4
-    else:                                  d_score = 0
+    if top_risk <= 20 and n_stocks >= 5:    d_score = 20
+    elif top_risk <= 30 and n_stocks >= 8:  d_score = 16
+    elif top_risk <= 40 and n_stocks >= 5:  d_score = 12
+    elif top_risk <= 50 and n_stocks >= 3:  d_score = 8
+    elif n_stocks >= 10:                    d_score = 4
+    else:                                   d_score = 0
     scores["diversification"] = d_score
 
     if 0.8 <= beta <= 1.1:   b_score = 20
