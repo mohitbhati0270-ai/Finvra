@@ -69,9 +69,8 @@ def compute_portfolio_analytics(
             except Exception:
                 beta = 1.0
 
-        marginal         = _safe(np.dot(ann_cov.iloc[i], w)) / port_vol if port_vol > 0 else 0
-        risk_contribution = _safe(w[i] * marginal / port_vol) if port_vol > 0 else 0
-
+        marginal          = _safe(np.dot(ann_cov.iloc[i], w)) if port_vol > 0 else 0
+        risk_contribution = _safe(w[i] * marginal / port_variance) if port_variance > 0 else 0
         stock_stats.append({
             "ticker":               ticker.replace(".NS", ""),
             "weight":               round(float(w[i]) * 100, 2),
