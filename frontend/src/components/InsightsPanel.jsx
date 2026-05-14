@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { theme } from '../theme'
 
 export default function InsightsPanel({ insights }) {
   const [isOpen, setIsOpen] = useState(true)
@@ -11,98 +12,109 @@ export default function InsightsPanel({ insights }) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          position: 'fixed',
-          right: isOpen ? '320px' : '0px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 1000,
-          transition: 'right 0.3s ease',
-          background: '#3B82F6',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px 0 0 8px',
-          padding: '12px 8px',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: '500',
-          writingMode: 'vertical-rl',
+          position:        'fixed',
+          right:           isOpen ? '320px' : '0px',
+          top:             '50%',
+          transform:       'translateY(-50%)',
+          zIndex:          1000,
+          transition:      'right 0.3s ease',
+          background:      `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`,
+          color:           theme.navyDark,
+          border:          'none',
+          borderRadius:    '8px 0 0 8px',
+          padding:         '12px 8px',
+          cursor:          'pointer',
+          fontSize:        '11px',
+          fontWeight:      '700',
+          writingMode:     'vertical-rl',
           textOrientation: 'mixed',
-          letterSpacing: '1px',
+          letterSpacing:   '1px',
+          boxShadow:       '-4px 0 12px rgba(201,168,76,0.2)',
         }}
       >
         {isOpen ? 'Hide ▶' : '◀ Insights'}
       </button>
 
       {/* Floating panel */}
-      <div
-        style={{
-          position: 'fixed',
-          right: isOpen ? '0px' : '-320px',
-          top: '0',
-          width: '300px',
-          height: '100vh',
-          background: 'var(--color-background-primary)',
-          borderLeft: '0.5px solid var(--color-border-tertiary)',
-          zIndex: 999,
-          transition: 'right 0.3s ease',
-          overflowY: 'auto',
-          padding: '24px 16px',
-          boxSizing: 'border-box',
-        }}
-      >
+      <div style={{
+        position:   'fixed',
+        right:      isOpen ? '0px' : '-320px',
+        top:        '0',
+        width:      '300px',
+        height:     '100vh',
+        background: theme.navyCard,
+        borderLeft: `1px solid ${theme.border}`,
+        zIndex:     999,
+        transition: 'right 0.3s ease',
+        overflowY:  'auto',
+        padding:    '24px 16px',
+        boxSizing:  'border-box',
+      }}>
+
         {/* Header */}
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <div style={{
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: '#3B82F6',
+              width:      '8px',
+              height:     '8px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`,
             }} />
             <h2 style={{
-              fontSize: '15px',
-              fontWeight: '500',
-              color: 'var(--color-text-primary)',
-              margin: 0,
+              fontSize:   '15px',
+              fontWeight: '700',
+              color:      theme.white,
+              margin:     0,
             }}>
               Finvra Insights
             </h2>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', margin: 0 }}>
+          <p style={{ fontSize: '11px', color: theme.gray, margin: 0 }}>
             Key findings from your portfolio analysis
           </p>
         </div>
 
         {/* Divider */}
         <div style={{
-          height: '0.5px',
-          background: 'var(--color-border-tertiary)',
-          marginBottom: '20px',
+          height:        '1px',
+          background:    theme.border,
+          marginBottom:  '20px',
         }} />
 
         {/* Insights list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {insights.map((insight, i) => (
-            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div key={i} style={{
+              display:      'flex',
+              gap:          '10px',
+              alignItems:   'flex-start',
+              background:   'rgba(201,168,76,0.05)',
+              border:       `1px solid rgba(201,168,76,0.1)`,
+              borderRadius: '10px',
+              padding:      '12px',
+            }}>
+              {/* Number badge */}
               <div style={{
-                minWidth: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                background: '#EFF6FF',
-                border: '0.5px solid #BFDBFE',
-                display: 'flex',
-                alignItems: 'center',
+                minWidth:       '22px',
+                height:         '22px',
+                borderRadius:   '50%',
+                background:     `linear-gradient(135deg, ${theme.gold}, ${theme.goldDark})`,
+                display:        'flex',
+                alignItems:     'center',
                 justifyContent: 'center',
-                fontSize: '10px',
-                fontWeight: '500',
-                color: '#3B82F6',
-                marginTop: '1px',
+                fontSize:       '10px',
+                fontWeight:     '700',
+                color:          theme.navyDark,
+                marginTop:      '1px',
+                flexShrink:     0,
               }}>
                 {i + 1}
               </div>
               <p style={{
-                fontSize: '12px',
-                color: 'var(--color-text-secondary)',
-                margin: 0,
-                lineHeight: '1.6',
+                fontSize:   '12px',
+                color:      theme.white,
+                margin:     0,
+                lineHeight: '1.7',
               }}>
                 {insight}
               </p>
@@ -112,15 +124,16 @@ export default function InsightsPanel({ insights }) {
 
         {/* Footer */}
         <div style={{
-          marginTop: '24px',
-          padding: '12px',
-          background: 'var(--color-background-secondary)',
-          borderRadius: '8px',
-          fontSize: '11px',
-          color: 'var(--color-text-tertiary)',
-          lineHeight: '1.5',
+          marginTop:    '24px',
+          padding:      '12px',
+          background:   'rgba(255,255,255,0.03)',
+          border:       `1px solid ${theme.border}`,
+          borderRadius: '10px',
+          fontSize:     '11px',
+          color:        theme.gray,
+          lineHeight:   '1.6',
         }}>
-          These insights are generated automatically based on your portfolio data. Not financial advice.
+          💡 These insights are generated automatically based on your portfolio data. Not financial advice.
         </div>
       </div>
     </>
